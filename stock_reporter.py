@@ -100,7 +100,7 @@ def generate_analysis_report(stock_data_text):
                 sys.exit(1)
 
 def create_dashboard_html(report_text):
-    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボードと過去ログを作成します"""
+    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（監視リスト機能付き）を作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
@@ -110,13 +110,131 @@ def create_dashboard_html(report_text):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換（サイバーパンクカラー）
+    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換
     linked_report = re.sub(
         r'\b(\d{4})\b',
         r'<a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a>',
         report_text
     )
     
+    # 共通JavaScript (監視リスト用)
+    watchlist_js = """
+    <script>
+        let watchlist = JSON.parse(localStorage.getItem('cyber_stock_watchlist') || '[]');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateWatchlistCount();
+        });
+
+        function updateWatchlistCount() {
+            const el = document.getElementById('watch-count');
+            if (el) el.textContent = watchlist.length;
+        }
+
+        function toggleWatchlistModal() {
+            const modal = document.getElementById('watchlist-modal');
+            if (modal.classList.contains('hidden')) {
+                renderWatchlist();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function addStockToWatchlist() {
+            const codeInput = document.getElementById('input-code');
+            const nameInput = document.getElementById('input-name');
+            const code = codeInput.value.trim();
+            const name = nameInput.value.trim() || ('銘柄 ' + code);
+
+            if (!code || !/^\d{4}$/.test(code)) {
+                alert('4桁の銘柄コードを入力してください（例: 7203）');
+                return;
+            }
+
+            if (watchlist.some(item => item.code === code)) {
+                alert('すでに監視リストに登録されています');
+                return;
+            }
+
+            watchlist.push({ code, name });
+            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+            
+            codeInput.value = '';
+            nameInput.value = '';
+            
+            updateWatchlistCount();
+            renderWatchlist();
+        }
+
+        function removeStockFromWatchlist(code) {
+            watchlist = watchlist.filter(item => item.code !== code);
+            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+            updateWatchlistCount();
+            renderWatchlist();
+        }
+
+        function renderWatchlist() {
+            const listEl = document.getElementById('watchlist-items');
+            if (!listEl) return;
+
+            if (watchlist.length === 0) {
+                listEl.innerHTML = '<li class="text-slate-500 text-xs py-4 text-center font-mono">NO WATCHLIST TARGETS REGISTERED</li>';
+                return;
+            }
+
+            listEl.innerHTML = watchlist.map(item => `
+                <li class="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition font-mono">
+                    <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-cyan-400 hover:text-fuchsia-400 font-bold flex items-center gap-2">
+                        <span class="text-fuchsia-400">[ ${item.code} ]</span>
+                        <span class="text-slate-200 text-sm hover:underline">${item.name}</span>
+                        <span class="text-xs text-yellow-400">🔗</span>
+                    </a>
+                    <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-0.5 hover:bg-red-950 transition">
+                        DEL
+                    </button>
+                </li>
+            `).join('');
+        }
+    </script>
+    """
+
+    # 監視リストモーダルの共通HTML
+    watchlist_modal_html = """
+    <!-- WATCHLIST MODAL -->
+    <div id="watchlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden justify-center items-center p-4">
+        <div class="bg-slate-950 border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)] w-full max-w-md p-6 space-y-4 font-mono">
+            <div class="flex justify-between items-center border-b border-fuchsia-500/40 pb-3">
+                <h3 class="text-lg font-bold text-fuchsia-400 flex items-center gap-2">
+                    <span>⭐ TARGET WATCHLIST</span>
+                </h3>
+                <button onclick="toggleWatchlistModal()" class="text-slate-400 hover:text-fuchsia-400 text-xl font-bold">✕</button>
+            </div>
+
+            <!-- ADD FORM -->
+            <div class="space-y-2 bg-slate-900/80 p-3 border border-slate-800">
+                <p class="text-xs text-cyan-400">ADD NEW WATCH TARGET:</p>
+                <div class="flex gap-2">
+                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-24 focus:outline-none focus:border-cyan-400">
+                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
+                    <button onclick="addStockToWatchlist()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold text-xs px-3 py-2 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
+                        + ADD
+                    </button>
+                </div>
+            </div>
+
+            <!-- WATCHLIST ITEMS -->
+            <ul id="watchlist-items" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+
+            <div class="pt-2 text-right">
+                <button onclick="toggleWatchlistModal()" class="text-xs text-slate-400 hover:text-slate-200 border border-slate-700 px-3 py-1">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    """
+
     # 日別レポート用サイバーパンクHTML
     report_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
@@ -137,17 +255,22 @@ def create_dashboard_html(report_text):
 </head>
 <body class="bg-black text-cyan-400 min-h-screen p-4 md:p-8 cyber-tile selection:bg-fuchsia-500 selection:text-black">
     <div class="max-w-4xl mx-auto space-y-6">
-        <header class="border-b-2 border-cyan-500 pb-4 shadow-[0_0_15px_rgba(0,240,255,0.4)] flex justify-between items-end">
+        <header class="border-b-2 border-cyan-500 pb-4 shadow-[0_0_15px_rgba(0,240,255,0.4)] flex justify-between items-end gap-2">
             <div>
-                <a href="../index.html" class="text-xs text-fuchsia-400 hover:text-fuchsia-300 font-bold">≪ RETURN TO SYSTEM DASHBOARD</a>
+                <a href="../index.html" class="text-xs text-fuchsia-400 hover:text-fuchsia-300 font-bold">≪ RETURN TO DASHBOARD</a>
                 <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400 tracking-wider mt-1">
                     ⚡ TARGET ANALYSIS // {today_display}
                 </h1>
             </div>
-            <span class="text-xs text-yellow-400 border border-yellow-400 px-2 py-0.5 animate-pulse">LIVE DATA</span>
+            <button onclick="toggleWatchlistModal()" class="text-xs bg-slate-900 border border-fuchsia-500 hover:bg-fuchsia-950 text-fuchsia-400 font-bold px-3 py-1.5 transition flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.3)]">
+                <span>⭐ WATCHLIST</span>
+                <span class="text-yellow-400">[ <span id="watch-count">0</span> ]</span>
+            </button>
         </header>
         <main class="bg-slate-950/90 rounded-none p-6 shadow-[0_0_20px_rgba(217,70,239,0.2)] border border-fuchsia-500/50 whitespace-pre-wrap leading-relaxed text-slate-200 text-sm md:text-base border-l-4 border-l-fuchsia-500">{linked_report}</main>
     </div>
+    {watchlist_modal_html}
+    {watchlist_js}
 </body>
 </html>"""
 
@@ -192,7 +315,7 @@ def create_dashboard_html(report_text):
     <div class="max-w-4xl mx-auto space-y-8">
         
         <!-- HEADER -->
-        <header class="border-b-2 border-cyan-500 pb-4 flex flex-col md:flex-row justify-between md:items-end gap-2 neon-glow-cyan">
+        <header class="border-b-2 border-cyan-500 pb-4 flex flex-col md:flex-row justify-between md:items-end gap-3 neon-glow-cyan">
             <div>
                 <div class="flex items-center space-x-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
@@ -202,8 +325,14 @@ def create_dashboard_html(report_text):
                     ⚡ NEW-HIGH TERMINAL
                 </h1>
             </div>
-            <div class="text-xs text-slate-400 font-mono border border-slate-800 p-2 bg-slate-950/80">
-                LAST UPDATED: <span class="text-yellow-400 font-bold">{today_display} 17:30 JST</span>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleWatchlistModal()" class="text-xs bg-slate-950 border border-fuchsia-500 hover:bg-fuchsia-950 text-fuchsia-400 font-bold px-3 py-2 transition flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.4)]">
+                    <span>⭐ WATCHLIST</span>
+                    <span class="text-yellow-400">[ <span id="watch-count">0</span> ]</span>
+                </button>
+                <div class="text-xs text-slate-400 font-mono border border-slate-800 p-2 bg-slate-950/80 hidden sm:block">
+                    UPDATED: <span class="text-yellow-400 font-bold">{today_display}</span>
+                </div>
             </div>
         </header>
         
@@ -231,6 +360,8 @@ def create_dashboard_html(report_text):
         </section>
         
     </div>
+    {watchlist_modal_html}
+    {watchlist_js}
 </body>
 </html>"""
 
@@ -238,7 +369,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】サイバーパンク風HTMLダッシュボードと過去ログの生成が完了しました。")
+    print("【成功】監視リスト機能付きサイバーパンク風HTMLダッシュボードと過去ログの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -282,7 +413,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. サイバーパンク風HTMLダッシュボード＆過去ログを自動生成中...")
+    print("4. サイバーパンク風HTMLダッシュボード＆過去ログ（監視リスト付き）を自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
