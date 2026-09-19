@@ -55,7 +55,7 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35])
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（混雑・エラー対策強化版）"""
     client = genai.Client()
     
     system_prompt = """
@@ -83,24 +83,32 @@ def generate_analysis_report(stock_data_text):
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
     
-    max_retries = 3
+    # 混雑時に備えてリトライ回数と待機時間を強化 (15秒, 30秒, 45秒, 60秒, 90秒)
+    max_retries = 5
+    retry_delays = [15, 30, 45, 60, 90]
+    
     for attempt in range(1, max_retries + 1):
+        # 試行後半（4回目以降）は安定性の高いモデルへ自動切替
+        model_name = "gemini-2.5-flash" if attempt <= 3 else "gemini-1.5-flash"
+        
         try:
             response = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model=model_name,
                 contents=[system_prompt, prompt]
             )
             return response.text
         except Exception as e:
-            print(f"【警告】Gemini APIの試行 ({attempt}/{max_retries}) に失敗しました: {e}")
+            print(f"【警告】Gemini API ({model_name}) の試行 ({attempt}/{max_retries}) に失敗しました: {e}")
             if attempt < max_retries:
-                time.sleep(10)
+                delay = retry_delays[attempt - 1]
+                print(f"--> {delay}秒間待機してから再試行します...")
+                time.sleep(delay)
             else:
                 print("【エラー】規定の再試行回数を超えたため処理を中断します。")
                 sys.exit(1)
 
 def create_dashboard_html(report_text):
-    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（銘柄名自動読み取り＆編集機能付き）を作成します"""
+    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボードを作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
@@ -110,11 +118,29 @@ def create_dashboard_html(report_text):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄コード（4桁数字）を「Yahoo!ファイナンスリンク ＋ ワンタップ⭐登録ボタン」に自動変換
+    # Python側で「コード」と「銘柄名」をセットで認識してHTMLに埋め込む
+    def replace_stock_with_name(match):
+        code = match.group(1)
+        name = match.group(2).strip()
+        
+        # 評価ランクなどの文字が誤検出された場合のガード
+        if name in ['S', 'A', 'B', 'C', '評価', 'ランク', '短評', '最優先注目銘柄', 'その他の注目銘柄']:
+            name = f"銘柄 {code}"
+            
+        return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{name}</span><button onclick="toggleInlineStock('{code}', '{name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
+
+    # パターン1: 「7203 トヨタ自動車」のようなコード＋名前の組み合わせを置換
     linked_report = re.sub(
-        r'\b(\d{4})\b',
-        r"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a><button onclick="toggleInlineStock('\1', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>""",
+        r'\b(\d{4})\b[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)',
+        replace_stock_with_name,
         report_text
+    )
+    
+    # パターン2: 単体で残ったコードのフォールバック置換
+    linked_report = re.sub(
+        r'(?<!\[ )\b(\d{4})\b(?!\.T)',
+        r"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a><button onclick="toggleInlineStock('\1', '', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>""",
+        linked_report
     )
     
     # 共通JavaScript (監視リスト用)
@@ -143,28 +169,7 @@ def create_dashboard_html(report_text):
             }
         }
 
-        function extractStockName(lineText, code) {
-            if (!lineText) return '';
-            const idx = lineText.indexOf(code);
-            if (idx !== -1) {
-                // 1. コードの後ろから銘柄名を取得 (例: "7203 トヨタ自動車")
-                let after = lineText.substring(idx + code.length).replace(/^[\]\s/|:：・\-\)\］\】]+/, '');
-                let mAfter = after.match(/^([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)/);
-                if (mAfter && mAfter[1] && !['評価', 'ランク', '短評', '⭐', 'S', 'A', 'B'].includes(mAfter[1].trim())) {
-                    return mAfter[1].trim();
-                }
-                
-                // 2. コードの前から銘柄名を取得 (例: "トヨタ自動車 (7203)")
-                let before = lineText.substring(0, idx).replace(/[\s/|:：・\(\（\［\【]+$/, '');
-                let mBefore = before.match(/([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)$/);
-                if (mBefore && mBefore[1] && !['コード', '銘柄', '銘柄名', '・', '🏆', '🔍'].includes(mBefore[1].trim())) {
-                    return mBefore[1].trim();
-                }
-            }
-            return '';
-        }
-
-        function toggleInlineStock(code, ev) {
+        function toggleInlineStock(code, defaultName, ev) {
             if (ev) ev.preventDefault();
             const index = watchlist.findIndex(item => item.code === code);
             
@@ -175,24 +180,12 @@ def create_dashboard_html(report_text):
                 renderWatchlist();
                 alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
             } else {
-                let detectedName = '';
-                if (ev && ev.currentTarget) {
-                    const parent = ev.currentTarget.closest('p, div, li') || ev.currentTarget.parentElement;
-                    if (parent) {
-                        detectedName = extractStockName(parent.textContent || '', code);
-                    }
-                }
-                
-                const defaultName = detectedName || ('銘柄 ' + code);
-                const finalName = prompt(`⭐ [ ${code} ] を監視リストに登録します。\n銘柄名を確認・変更して「OK」を押してください:`, defaultName);
-                
-                if (finalName === null) return; // キャンセル時
-                
-                const name = finalName.trim() || defaultName;
+                const name = defaultName || ('銘柄 ' + code);
                 watchlist.push({ code, name });
                 localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
                 updateWatchlistCount();
                 renderWatchlist();
+                alert(`⭐ [ ${code} ] ${name} を監視リストに登録しました！`);
             }
         }
 
@@ -441,7 +434,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】銘柄名自動読み取り＆編集機能付きダッシュボードの生成が完了しました。")
+    print("【成功】銘柄名完全埋め込み＆エラー対策ダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -485,7 +478,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. 銘柄名自動判定・編集機能付きダッシュボード＆過去ログを自動生成中...")
+    print("4. 銘柄名完全埋め込み＆エラー対策ダッシュボードを自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
