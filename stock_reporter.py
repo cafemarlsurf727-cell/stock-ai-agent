@@ -1,3 +1,4 @@
+
 import os
 import sys
 import requests
@@ -43,7 +44,6 @@ def fetch_new_high_stocks():
     for row in rows:
         cols = [col.text.strip() for col in row.find_all(["th", "td"])]
         if cols:
-            # 各列の余分な改行や空白を整理
             clean_cols = [" ".join(c.split()) for c in cols]
             formatted_data.append(" | ".join(clean_cols))
             
