@@ -100,88 +100,136 @@ def generate_analysis_report(stock_data_text):
                 sys.exit(1)
 
 def create_dashboard_html(report_text):
-    """Webサイト（GitHub Pages）用のHTMLダッシュボードと過去ログを作成します"""
+    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボードと過去ログを作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
-    today_display = now.strftime("%Y年%m月%d日")
+    today_display = now.strftime("%Y.%m.%d")
     
-    # docsフォルダ作成（GitHub Pagesの公開用ディレクトリ）
     docs_dir = "docs"
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換
+    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換（サイバーパンクカラー）
     linked_report = re.sub(
         r'\b(\d{4})\b',
-        r'<a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">\1</a>',
+        r'<a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a>',
         report_text
     )
     
-    # 日別HTML生成
+    # 日別レポート用サイバーパンクHTML
     report_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{today_display} - 新高値分析レポート</title>
+    <title>[ {today_display} ] CYBER HIGH-BREAK REPORT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        body {{ font-family: 'Share Tech Mono', monospace, sans-serif; }}
+        .cyber-tile {{
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(5, 5, 10, 0.95) 100%);
+            background-image: radial-gradient(rgba(0, 240, 255, 0.1) 1px, transparent 0);
+            background-size: 16px 16px;
+        }}
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
-    <div class="max-w-4xl mx-auto">
-        <header class="mb-6 flex justify-between items-center border-b border-slate-700 pb-4">
+<body class="bg-black text-cyan-400 min-h-screen p-4 md:p-8 cyber-tile selection:bg-fuchsia-500 selection:text-black">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="border-b-2 border-cyan-500 pb-4 shadow-[0_0_15px_rgba(0,240,255,0.4)] flex justify-between items-end">
             <div>
-                <a href="../index.html" class="text-xs text-cyan-400 hover:underline">← ダッシュボードへ戻る</a>
-                <h1 class="text-2xl font-bold mt-1">新高値精鋭レポート</h1>
-                <p class="text-xs text-slate-400">{today_display} 17:30 更新</p>
+                <a href="../index.html" class="text-xs text-fuchsia-400 hover:text-fuchsia-300 font-bold">≪ RETURN TO SYSTEM DASHBOARD</a>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400 tracking-wider mt-1">
+                    ⚡ TARGET ANALYSIS // {today_display}
+                </h1>
             </div>
+            <span class="text-xs text-yellow-400 border border-yellow-400 px-2 py-0.5 animate-pulse">LIVE DATA</span>
         </header>
-        <main class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 whitespace-pre-wrap leading-relaxed text-sm md:text-base">{linked_report}</main>
+        <main class="bg-slate-950/90 rounded-none p-6 shadow-[0_0_20px_rgba(217,70,239,0.2)] border border-fuchsia-500/50 whitespace-pre-wrap leading-relaxed text-slate-200 text-sm md:text-base border-l-4 border-l-fuchsia-500">{linked_report}</main>
     </div>
 </body>
 </html>"""
 
-    # 本日分のHTML保存
     today_file_path = os.path.join(reports_dir, f"{today_str}.html")
     with open(today_file_path, "w", encoding="utf-8") as f:
         f.write(report_html)
         
-    # 過去ログファイル一覧を取得して降順ソート
+    # 過去ログリンクのサイバー調表示
     files = sorted(os.listdir(reports_dir), reverse=True)
     archive_links = ""
     for file in files:
         if file.endswith(".html"):
             date_part = file.replace(".html", "")
-            archive_links += f'<li><a href="reports/{file}" class="block p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition text-slate-200 font-mono flex justify-between items-center"><span>📅 {date_part} のレポート</span><span class="text-xs text-cyan-400">閲覧 →</span></a></li>\n'
+            archive_links += f'''<li>
+            <a href="reports/{file}" class="group block p-3 bg-slate-950 border border-cyan-500/30 hover:border-fuchsia-500 hover:shadow-[0_0_15px_rgba(217,70,239,0.4)] transition duration-200 flex justify-between items-center text-sm font-mono">
+                <span class="text-cyan-400 group-hover:text-fuchsia-400 transition">▶ ARCHIVE // {date_part}</span>
+                <span class="text-xs text-slate-500 group-hover:text-yellow-400">ACCESS LOG →</span>
+            </a>
+            </li>\n'''
             
-    # メインダッシュボード（index.html）生成
+    # メインダッシュボード（index.html）サイバーパンクデザイン
     index_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新高値ブレイク分析ダッシュボード</title>
+    <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        body {{ font-family: 'Share Tech Mono', monospace, sans-serif; }}
+        .cyber-bg {{
+            background: linear-gradient(180deg, #05050a 0%, #090d16 100%);
+            background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 0), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }}
+        .neon-glow-cyan {{ box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }}
+        .neon-glow-fuchsia {{ box-shadow: 0 0 15px rgba(217, 70, 239, 0.3); }}
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+<body class="bg-black text-slate-100 min-h-screen p-4 md:p-8 cyber-bg selection:bg-fuchsia-500 selection:text-black">
     <div class="max-w-4xl mx-auto space-y-8">
-        <header class="border-b border-slate-700 pb-4">
-            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">📈 新高値分析ダッシュボード</h1>
-            <p class="text-sm text-slate-400 mt-1">Gemini 3.6 Flash による自動スクリーニングアーカイブ</p>
+        
+        <!-- HEADER -->
+        <header class="border-b-2 border-cyan-500 pb-4 flex flex-col md:flex-row justify-between md:items-end gap-2 neon-glow-cyan">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span class="text-xs text-cyan-400 tracking-widest uppercase">SYSTEM OPERATIONAL // GEMINI 3.6 FLASH</span>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-yellow-400 tracking-wider">
+                    ⚡ NEW-HIGH TERMINAL
+                </h1>
+            </div>
+            <div class="text-xs text-slate-400 font-mono border border-slate-800 p-2 bg-slate-950/80">
+                LAST UPDATED: <span class="text-yellow-400 font-bold">{today_display} 17:30 JST</span>
+            </div>
         </header>
         
-        <section class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-cyan-400">🔥 最新レポート ({today_display})</h2>
-                <a href="reports/{today_str}.html" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg transition">全画面で開く</a>
+        <!-- LATEST REPORT -->
+        <section class="bg-slate-950/90 border border-cyan-500/60 neon-glow-cyan p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3">
+                <h2 class="text-lg md:text-xl font-bold text-cyan-400 tracking-wide flex items-center gap-2">
+                    <span>🔥 LATEST SCREENING REPORT</span>
+                    <span class="text-xs text-fuchsia-400 border border-fuchsia-500/50 px-2 py-0.5">{today_display}</span>
+                </h2>
+                <a href="reports/{today_str}.html" class="text-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold px-3 py-1.5 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
+                    EXPAND FULL SCREEN ↗
+                </a>
             </div>
-            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base border-t border-slate-700 pt-4 max-h-[500px] overflow-y-auto">{linked_report}</div>
+            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-200 border-l-2 border-fuchsia-500 pl-4 max-h-[500px] overflow-y-auto font-sans">{linked_report}</div>
         </section>
         
+        <!-- ARCHIVE LOGS -->
         <section class="space-y-4">
-            <h2 class="text-xl font-bold text-slate-300">📂 過去ログ一覧</h2>
-            <ul class="space-y-2">{archive_links}</ul>
+            <h2 class="text-lg font-bold text-fuchsia-400 tracking-wider flex items-center gap-2">
+                <span>📂 SYSTEM ARCHIVES</span>
+                <span class="text-xs text-slate-500">// HISTORICAL LOGS</span>
+            </h2>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">{archive_links}</ul>
         </section>
+        
     </div>
 </body>
 </html>"""
@@ -190,7 +238,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】HTMLダッシュボードと過去ログの生成が完了しました。")
+    print("【成功】サイバーパンク風HTMLダッシュボードと過去ログの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -234,7 +282,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. HTMLダッシュボード＆過去ログを自動生成中...")
+    print("4. サイバーパンク風HTMLダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
