@@ -33,7 +33,7 @@ def is_market_holiday(date_obj):
         if jpholiday.is_holiday(date_obj.date() if hasattr(date_obj, "date") else date_obj):
             return True
     except ImportError:
-        print("【警告】jpholiday が未インストールのため祝日判定をスキップします（requirements.txt を確認してください）。")
+        print("【警告】jpholiday が未インストールのため祝日判定をスキップします。")
     return False
 
 def fetch_new_high_stocks():
@@ -96,7 +96,7 @@ def fetch_new_high_stocks():
     return "\n".join(data_rows), stock_dict, scraped_count
 
 def extract_grounding_urls(response):
-    """検索グラウンディングで実際に参照されたURLだけを取り出す（本文からの抽出はしない）"""
+    """検索グラウンディングで実際に参照されたURLだけを取り出す"""
     urls = []
     try:
         for cand in response.candidates or []:
@@ -111,7 +111,7 @@ def extract_grounding_urls(response):
     return urls
 
 def call_gemini_with_retry(client, model, contents_list, config=None):
-    """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。"""
+    """指数バックオフ＋ジッタ付きリトライ"""
     max_retries = 5
     for attempt in range(1, max_retries + 1):
         try:
@@ -122,7 +122,7 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
             code = getattr(e, "code", None)
             retryable = code in (429, 500, 503, 504)
             if not retryable or attempt == max_retries:
-                print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
+                print(f"【エラー】Gemini API 失敗: {e}")
                 raise
             delay = 60 if code == 429 else attempt * 10
             print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）。{delay}秒待機して再試行します。")
@@ -138,14 +138,14 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
     client = genai.Client()
-    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
+    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-2.5-flash")
+    model_research = os.environ.get("MODEL_RESEARCH", "gemini-2.5-flash")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-2.5-flash")
 
     print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
-あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
-銘柄コードは英字混在4桁（例: 130A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
+あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点に基づき、特に有望な8銘柄を選定してください。
+銘柄コードは英字混在4桁（例: 219A, 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
 【データ】
 {stock_data_text}
 """
@@ -154,9 +154,8 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
 
     print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
     stage2_prompt = f"""
-以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
-銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
-本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
+以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値や新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。
+銘柄コードは英字混在4桁（例: 219A）の場合があります。必ず元の表記のまま正確に引用してください。
 
 【Stage 1 候補データ】
 {stage1_candidates}
@@ -172,8 +171,7 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     stage3_prompt = f"""
 以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
-リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
-codeフィールドは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、元の表記のまま正確に引用してください。
+codeフィールドは英字混在4桁（例: 219A）の場合があります。数字だけに丸めたりせず、元の表記のまま正確に引用してください。
 
 【リサーチ結果】
 {grounded_research}
@@ -196,7 +194,7 @@ codeフィールドは英字混在4桁（例: 130A）の場合があります。
                 "items": {
                     "type": "OBJECT",
                     "properties": {
-                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁（130A等）の場合は元の表記のまま。"},
+                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁（219A等）の場合は元の表記のまま。"},
                         "name": {"type": "STRING"},
                         "rank": {"type": "STRING", "enum": ["S", "A", "B"]},
                         "breakout_quality": {"type": "STRING"},
@@ -262,16 +260,21 @@ def escape_html(text):
                 .replace("'", "&#39;"))
 
 def normalize_code(raw_code, stock_dict, raw_name=None):
-    """Geminiの自然文処理でコードが欠損・小文字化した場合に、
-    スクレイピング原本(stock_dict)と突き合わせて正しいコードへ復元する"""
+    """英字混在コード（219A, 130A等）を確実に認識・正規化する"""
     code = re.sub(r'[^0-9A-Za-z]', '', str(raw_code or '')).upper()
-    if code in stock_dict:
+    
+    if re.match(r'^\d[0-9A-Z]{3}$', code):
         return code
+
     if raw_name:
         for c, n in stock_dict.items():
             if n == raw_name or (n and (n in raw_name or raw_name in n)):
                 return c
-    return code
+                
+    if code:
+        return code
+        
+    return "0000"
 
 def build_static_assets():
     """軽量・高速な外部CSSとJSファイルを assets/ に生成します"""
@@ -470,7 +473,7 @@ function renderWatchlistModal() {
         f.write(js_content.strip())
 
 def build_line_messages(data, today_display, max_len=4500, max_messages=5):
-    """LINEの1通あたり上限に収まるようブロック単位で複数メッセージに分割する"""
+    """LINEの1通あたり上限に収まるよう複数メッセージに分割する"""
     summary = data.get("summary", {})
     stocks = data.get("evaluated_stocks", [])
 
@@ -533,7 +536,26 @@ def create_dashboard_html(data, stock_dict):
         raw_name_from_json = s.get("name", "")
         resolved_code = normalize_code(raw_code, stock_dict, raw_name_from_json)
         code = escape_html(resolved_code)
-        name = escape_html(stock_dict.get(resolved_code, raw_name_from_json or f"銘柄 {resolved_code}"))
+        
+        # 社名の取得と重複ダブりの自動解消
+        base_name = stock_dict.get(resolved_code, raw_name_from_json)
+        if not base_name:
+            base_name = f"銘柄 {resolved_code}"
+            
+        clean_name = re.sub(r'^[0-9A-Za-z]{4}\s*', '', base_name).strip()
+        clean_name = clean_name.replace(f"[{code}]", "").strip()
+        
+        parts = clean_name.split()
+        if len(parts) >= 2 and parts[0] == parts[1]:
+            clean_name = parts[0]
+        else:
+            half_len = len(clean_name) // 2
+            if len(clean_name) > 2 and clean_name[:half_len] == clean_name[half_len:].strip():
+                clean_name = clean_name[:half_len].strip()
+                
+        if not clean_name:
+            clean_name = f"銘柄 {resolved_code}"
+        name = escape_html(clean_name)
 
         rank = s.get("rank", "B")
         rank = rank if rank in ("S", "A", "B") else "B"
@@ -695,7 +717,7 @@ def create_dashboard_html(data, stock_dict):
     return build_line_messages(data, today_display)
 
 def send_line_push_messages(messages):
-    """LINE Messaging API経由でプッシュ通知を送信します（複数通に分割済みの前提）"""
+    """LINE Messaging API経由でプッシュ通知を送信します"""
     line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
     line_user_id = os.environ.get("LINE_USER_ID", "").strip()
 
@@ -722,7 +744,7 @@ def send_line_push_messages(messages):
         sys.exit(1)
 
 def write_job_summary(data):
-    """GitHub Actions のジョブサマリー（Summary タブ）にテーブルを出力します"""
+    """GitHub Actions のジョブサマリーに出力します"""
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     stocks = data.get("evaluated_stocks", [])
 
