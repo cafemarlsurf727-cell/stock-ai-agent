@@ -3,78 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新高値ブレイク分析ダッシュボード</title>
+    <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        body { font-family: 'Share Tech Mono', monospace, sans-serif; }
+        .cyber-bg {
+            background: linear-gradient(180deg, #05050a 0%, #090d16 100%);
+            background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 0), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+        .neon-glow-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+        .neon-glow-fuchsia { box-shadow: 0 0 15px rgba(217, 70, 239, 0.3); }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+<body class="bg-black text-slate-100 min-h-screen p-4 md:p-8 cyber-bg selection:bg-fuchsia-500 selection:text-black">
     <div class="max-w-4xl mx-auto space-y-8">
-        <header class="border-b border-slate-700 pb-4">
-            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">📈 新高値分析ダッシュボード</h1>
-            <p class="text-sm text-slate-400 mt-1">Gemini 3.6 Flash による自動スクリーニングアーカイブ</p>
+        
+        <!-- HEADER -->
+        <header class="border-b-2 border-cyan-500 pb-4 flex flex-col md:flex-row justify-between md:items-end gap-2 neon-glow-cyan">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span class="text-xs text-cyan-400 tracking-widest uppercase">SYSTEM OPERATIONAL // GEMINI 3.6 FLASH</span>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-yellow-400 tracking-wider">
+                    ⚡ NEW-HIGH TERMINAL
+                </h1>
+            </div>
+            <div class="text-xs text-slate-400 font-mono border border-slate-800 p-2 bg-slate-950/80">
+                LAST UPDATED: <span class="text-yellow-400 font-bold">2026.09.19 17:30 JST</span>
+            </div>
         </header>
         
-        <section class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-cyan-400">🔥 最新レポート (2026年09月19日)</h2>
-                <a href="reports/2026-09-19.html" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg transition">全画面で開く</a>
+        <!-- LATEST REPORT -->
+        <section class="bg-slate-950/90 border border-cyan-500/60 neon-glow-cyan p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3">
+                <h2 class="text-lg md:text-xl font-bold text-cyan-400 tracking-wide flex items-center gap-2">
+                    <span>🔥 LATEST SCREENING REPORT</span>
+                    <span class="text-xs text-fuchsia-400 border border-fuchsia-500/50 px-2 py-0.5">2026.09.19</span>
+                </h2>
+                <a href="reports/2026-09-19.html" class="text-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold px-3 py-1.5 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
+                    EXPAND FULL SCREEN ↗
+                </a>
             </div>
-            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base border-t border-slate-700 pt-4 max-h-[500px] overflow-y-auto">新高値ブレイク投資法の観点から、提供されたリストを厳選・分析し、真に追随価値のある「本物の新高値銘柄」をスクリーニングしました。
+            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-200 border-l-2 border-fuchsia-500 pl-4 max-h-[500px] overflow-y-auto font-sans">📊 **本日の新高値精鋭レポート**
 
----
-
-📊 **本日の新高値精鋭レポート**
+新高値ブレイク投資法の観点から、本日発表されたリストから「モメンタム」「上値の軽さ（ベースのブレイク）」「業績・材料背景」を備えた本物のブレイク銘柄を厳選・評価しました。
 
 ---
 
 🏆 **最優先注目銘柄**
 
-### 1. <a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">3560</a> / ほぼ日 / **評価ランク：S**
-* **原動力（業績サプライズ・材料）**
-  主力の「ほぼ日手帳」などの海外販売が好調。長らく続いたもみ合いを打破する強力な買戻し・新規資金の流入が見られます。
-* **テクニカル/出来高評価**
-  7月7日の高値（4,690円）を約2ヶ月ぶりに圧倒的な勢いで上抜け、5,200円へ一気に急伸。抵抗線を出来高急増とともにクリアした、**教科書通りの綺麗なブレイクアウト**を形成しています。
-* **アクションプラン**
-  本日の急騰直後なため、過熱感からの小幅な押し目（4,800円〜4,900円近辺）があれば絶好の押し目買い候補。損切りラインはブレイクラインである4,650円割れに設定。
+### 1. <a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a> / ほぼ日 / 評価ランク：S
+* **原動力（業績サプライズ・材料）**：
+  主力の「ほぼ日手帳」の国内・海外（特にアジア・北米）での需要拡大と海外販売比率の上昇、ライフスタイル関連商品の好調による業績再成長ストーリーが評価。
+* **テクニカル/出来高評価**：
+  7月高値（4,690円）から約2ヶ月半続いた保ち合い（ベース）を大幅な大陽線で一気に上放れ、5,200円のストップ高水準まで急伸。カップウィズハンドルやフラッグ形状からの典型的な「新高値ブレイクアウト」を達成。
+* **アクションプラン**：
+  上値抵抗線のない「青天井」フェーズに突入。翌営業日の寄付きでの追随買い、またはブレイクライン（4,700円〜4,800円付近）までの押し目（ピボットポイントへのプルバック）を確認してからのエントリーが有効。
 
 ---
 
-### 2. <a href="https://finance.yahoo.co.jp/quote/3132.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">3132</a> / マクニカホールディングス / **評価ランク：A**
-* **原動力（業績サプライズ・材料）**
-  生成AI向け半導体需要の拡大と、ネットワーク・セキュリティ事業の二ノ宮構造で高成長を維持。東証プライムの主力級銘柄としての安心感があります。
-* **テクニカル/出来高評価**
-  連日で年初来高値を更新（4,118円）。節目となる4,000円の大台を定着させながらの上昇であり、機関投資家の断続的な買いが確認できます。
-* **アクションプラン**
-  トレンドフォローの王道銘柄。一過性の急騰ではないため、5日移動平均線にタッチするタイミングや、4,000円前後の押し目で素直にエントリー。
+### 2. <a href="https://finance.yahoo.co.jp/quote/3132.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3132 ]</a> / マクニカホールディングス / 評価ランク：A
+* **原動力（業績サプライズ・材料）**：
+  生成AI向け半導体需要やネットワーク・サイバーセキュリティ事業の需要増。プライム市場の中大型株として、機関投資家からの継続的な資金流入が背景。
+* **テクニカル/出来高評価**：
+  心理的節目である4,000円の大台を力強く上抜け、4,118円まで年初来高値を更新。長らく意識されていた上値抵抗帯をクリアし、上昇トレンドの再開を示唆。
+* **アクションプラン**：
+  大台4,000円が今後の強力なサポート（下値支持線）へ転換したかを確認。4,000〜4,050円付近での押し目買いを基本戦略とし、直近高値4,118円突破で買い増しを検討。
 
 ---
 
 🔍 **その他の注目銘柄**
 
-* **<a href="https://finance.yahoo.co.jp/quote/4847.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">4847</a> インテリジェント ウェイブ (評価: A)**
-  * **短評**: クレジット決済・セキュリティ関連で業績絶好調。1,500円の大台を突破し、上値追いトレンドが継続。
-* **<a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">4436</a> ミンカブ・ジ・インフォノイド (評価: B+)**
-  * **短評**: 5月高値（564円）を明確に上抜く「底値圏脱出型」の新高値。モメンタムが強く、短期リバウンド狙いの資金が集中。
-* **<a href="https://finance.yahoo.co.jp/quote/4417.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">4417</a> グローバルセキュリティエキスパート (評価: B+)**
-  * **短評**: 国策・需要拡大が続くサイバーセキュリティ本命。高値圏での保ち合いを上放れしつつあり、ジワジワと強い展開。
-* **<a href="https://finance.yahoo.co.jp/quote/3393.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">3393</a> スターティアホールディングス (評価: B)**
-  * **短評**: 中小企業向けクラウド・セキュリティ好調で高配当魅力も高水準。綺麗に右肩上がりのチャネルを形成中。
+* **<a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4436 ]</a> ミンカブ・ジ・インフォノイド (評価: A)**  
+  5月高値（564円）を約4ヶ月ぶりに上抜き600円の大台へ。長期底打ちからの本格トレンド転換を示すブレイクで、上昇余地が大きい。
+* **479A PRONI (評価: A)**  
+  直近IPO銘柄で連日の高値更新（2,258円）。ビジネスマッチング市場の急成長を追い風にシコリのない高値圏を力強く推移。
+* **<a href="https://finance.yahoo.co.jp/quote/4417.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4417 ]</a> グローバルセキュリティエキスパート (評価: A)**  
+  高値5,930円まで買われ、6,000円の大台にリーチ。国策・企業防衛テーマであるサイバーセキュリティの好業績裏付けがある本命株。
+* **219A Heartseed (評価: B+)**  
+  8月高値（2,646円）を更新。iPS細胞由来心筋移植など独自パイプラインの材料性を背景に、グロース市場の中で良好なモメンタムを維持。
 
 ---
 
 💡 **本日の総括・相場感**
 
-* **市場傾向**
-  本日は「IT・セキュリティ」「半導体関連」「個別材料株（ほぼ日など）」に新高値買いが集中する傾向が見られました。
-* **観察のワンポイントアドバイス**
-  「連日わずかに前日高値を更新している銘柄（高値揉み合い）」よりも、**「数ヶ月ぶりの節目抵抗線を強い勢いと出来高で上抜いた銘柄（<a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">3560</a> ほぼ日 や <a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">4436</a> ミンカブなど）」**の方が、上値追いのモメンタム（推進力）が圧倒的に高くなります。
-  ダマシを避けるためにも、**「過去の抵抗線を明確にブレイクしたか」**を最重要指標として監視を継続してください。</div>
+* **市場傾向**  
+  本日は大型株からグロース・中小型株まで幅広く新高値銘柄が散見されますが、特に**「数ヶ月ベースの揉み合いを上放れた銘柄（ほぼ日、ミンカブ等）」**に強力な買いエネルギーが集中しています。連日で数円だけ高値を更新している銘柄よりも、長い保ち合いをクリアした銘柄の方がブレイク後の持続力が高くなります。
+
+* **観察のワンポイントアドバイス**  
+  新高値買いで最も重要なのは**「高値更新の質」**です。前日高値をわずかに更新して陰線を引くような「偽のブレイク（ダマシ）」を避け、保ち合い期間が長く、出来高を伴って強い陽線で節目を上抜けた「本物のブレイク銘柄」に資金を集中させましょう。勝率を高めるため、ブレイク直後の過熱感がある寄付き直後ではなく、最初の押し目形成（15分足レベルでのサポート確認）を待つ姿勢も効果的です。</div>
         </section>
         
+        <!-- ARCHIVE LOGS -->
         <section class="space-y-4">
-            <h2 class="text-xl font-bold text-slate-300">📂 過去ログ一覧</h2>
-            <ul class="space-y-2"><li><a href="reports/2026-09-19.html" class="block p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition text-slate-200 font-mono flex justify-between items-center"><span>📅 2026-09-19 のレポート</span><span class="text-xs text-cyan-400">閲覧 →</span></a></li>
+            <h2 class="text-lg font-bold text-fuchsia-400 tracking-wider flex items-center gap-2">
+                <span>📂 SYSTEM ARCHIVES</span>
+                <span class="text-xs text-slate-500">// HISTORICAL LOGS</span>
+            </h2>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3"><li>
+            <a href="reports/2026-09-19.html" class="group block p-3 bg-slate-950 border border-cyan-500/30 hover:border-fuchsia-500 hover:shadow-[0_0_15px_rgba(217,70,239,0.4)] transition duration-200 flex justify-between items-center text-sm font-mono">
+                <span class="text-cyan-400 group-hover:text-fuchsia-400 transition">▶ ARCHIVE // 2026-09-19</span>
+                <span class="text-xs text-slate-500 group-hover:text-yellow-400">ACCESS LOG →</span>
+            </a>
+            </li>
 </ul>
         </section>
+        
     </div>
 </body>
 </html>
