@@ -81,12 +81,11 @@ def generate_analysis_report(stock_data_text):
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
     
-    # サーバー混雑対策：最大3回まで再試行
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=[system_prompt, prompt]
             )
             return response.text
