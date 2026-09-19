@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import json
 import re
 import requests
 from datetime import datetime, timezone, timedelta
@@ -35,7 +36,6 @@ def fetch_new_high_stocks():
         
     soup = BeautifulSoup(response.text, "html.parser")
     
-    # ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を作成（英字混在コード 130A 等に対応）
     stock_dict = {}
     for a in soup.find_all("a", href=True):
         m = re.search(r'/quote/([0-9A-Za-z]{4})\.T', a['href'], re.IGNORECASE)
@@ -68,34 +68,59 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35]), stock_dict
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（429クォータエラー＆503対策強化版）"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施し、JSONデータを返します"""
     client = genai.Client()
     
     system_prompt = """
-あなたは「新高値ブレイク投資法」の専門家です。
-提供されたYahoo!ファイナンスの年初来高値更新銘柄リストから、業績背景・出来高・上昇モメンタムを考慮し、
-「本物の新高値銘柄」をスクリーニングして簡潔なレポートを作成してください。
+あなたは株式投資の高度な自動スクリーニングAPIです。
+入力された「新高値更新銘柄データ」を「新高値ブレイク投資法」のロジックに基づいて分析し、投資価値の高い注目銘柄を特定して【完全なJSON形式】のみで出力してください。
 
-【出力フォーマット】
-📊 本日の新高値精鋭レポート
+# 判定・評価ロジック
+1. 高値更新の質と上値の軽さ
+   - 過去1年（52週）または過去2年以上の高値突破か判断する（2年以上のブレイクは企業変革の可能性が高く加点）。
+   - 上値に抵抗帯（シコリ）がなく「売り圧力が少ない上値が軽い状態」かを評価する。
+2. 業績・ファンダメンタル（四半期業績の伸び）
+   - 直近四半期の「経常利益 前年同期比 +20% 以上」かつ「売上高 前年同期比 +10% 以上」を満たしているかチェックする。
+   - 新高値更新の原動力（決算サプライズ、新事業、業界構造の変化等）が存在するか確認する。
+3. テクニカル・出来高
+   - 突破時に「出来高の急増」が見られるか。
+   - 移動平均線が上向きのトレンドを形成しているか。
 
-🏆 最優先注目銘柄
-・コード 銘柄名 (評価ランク SまたはA)
-・原動力（業績サプライズ・材料）
-・テクニカル/出来高評価
-・アクションプラン
+# 出力ルール
+- 出力は必ず以下のJSONスキーマ構造を満たすパース可能なJSONオブジェクト【のみ】で出力してください。
+- マークダウンのバッククォート（```json など）や前後の挨拶文は一切含めないでください。
 
-🔍 その他の注目銘柄
-・コード 銘柄名 (評価): 短評
-
-💡 本日の総括・相場感
-・市場傾向と観察のワンポイントアドバイス
-
-※各銘柄の表記は「4桁コード 銘柄名」の形式（例: 7203 トヨタ自動車、130A VERITAS）を徹底し、英字混在コードの場合も省略せず正確に記載してください。読みやすいよう適度に絵文字や改行を活用してください。
+# 出力JSONフォーマット
+{
+  "summary": {
+    "total_scraped": 35,
+    "top_picks_count": 5,
+    "market_trend_comment": "本日の新高値銘柄群に見られるセクターやテーマの傾向上についての詳細コメント"
+  },
+  "evaluated_stocks": [
+    {
+      "code": "7203",
+      "name": "トヨタ自動車",
+      "rank": "S",
+      "breakout_quality": "過去2年高値更新",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "増収傾向",
+        "profit_growth": "経常利益大幅増",
+        "catalyst": "新高値突破の原動力・材料説明"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上向き"
+      },
+      "analysis_reason": "上値の軽さや業績変化に関する分析理由",
+      "action_plan": "買い検討"
+    }
+  ]
+}
 """
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
-    
     model_name = "gemini-3.6-flash"
     max_retries = 5
     
@@ -105,27 +130,26 @@ def generate_analysis_report(stock_data_text):
                 model=model_name,
                 contents=[system_prompt, prompt]
             )
-            return response.text
+            raw_text = response.text.strip()
+            # マークダウンのコードブロックがついている場合を除去
+            raw_text = re.sub(r'^```json\s*', '', raw_text)
+            raw_text = re.sub(r'^```\s*', '', raw_text)
+            raw_text = re.sub(r'\s*```$', '', raw_text)
+            
+            parsed_json = json.loads(raw_text)
+            return parsed_json
         except Exception as e:
             err_msg = str(e)
-            print(f"【警告】Gemini API ({model_name}) の試行 ({attempt}/{max_retries}) に失敗しました: {e}")
-            
+            print(f"【警告】Gemini API分析試行 ({attempt}/{max_retries}) に失敗しました: {e}")
             if attempt < max_retries:
-                # 429エラー（リクエスト制限・制限超過）の場合は60秒しっかり待つ
-                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                    delay = 65
-                    print(f"--> レート制限（429）を検知しました。{delay}秒間待機してから再試行します...")
-                else:
-                    delay = attempt * 15
-                    print(f"--> {delay}秒間待機してから再試行します...")
-                
+                delay = 65 if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) else (attempt * 15)
                 time.sleep(delay)
             else:
                 print("【エラー】規定の再試行回数を超えたため処理を中断します。")
                 sys.exit(1)
 
-def create_dashboard_html(report_text, stock_dict):
-    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボードを作成します"""
+def create_dashboard_html(data, stock_dict):
+    """構造化JSONデータからサイバーパンク風のカード型HTMLダッシュボードを生成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
@@ -135,34 +159,62 @@ def create_dashboard_html(report_text, stock_dict):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    def replace_stock_match(match):
-        code = match.group(1).upper()
-        inline_name = match.group(2) if match.group(2) else ""
-        inline_name = inline_name.strip()
-        
-        if code in ['2024', '2025', '2026', '2027', '2028', '2029', '2030'] and code not in stock_dict:
-            return match.group(0)
-            
-        if inline_name in ['年', '月', '日', '時', '分', '秒', '回', '件', '人', '円', '%', 'パーセント']:
-            return match.group(0)
-            
-        invalid_words = ['S', 'A', 'B', 'C', '評価', 'ランク', '短評', '最優先注目銘柄', 'その他の注目銘柄', 'アクションプラン', '原動力', 'テクニカル', '出来高評価', '評価ランク']
-        if inline_name in invalid_words:
-            inline_name = ""
-            
-        final_name = stock_dict.get(code, "")
-        if not final_name and inline_name:
-            final_name = inline_name
-        if not final_name:
-            final_name = f"銘柄 {code}"
-            
-        js_safe_name = final_name.replace("'", "\\'").replace('"', '\\"')
-        
-        return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{final_name}</span><button onclick="toggleInlineStock('{code}', '{js_safe_name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
-
-    pattern = r'\b(\d[0-9A-Za-z]{3})\b(?:[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-（）\(\)]+))?'
-    linked_report = re.sub(pattern, replace_stock_match, report_text)
+    summary = data.get("summary", {})
+    stocks = data.get("evaluated_stocks", [])
     
+    # LINE通知用のテキスト生成
+    line_text = f"📊 本日の新高値精鋭レポート // {today_display}\n\n"
+    market_comment = summary.get("market_trend_comment", "本日の相場感コメントなし")
+    line_text += f"💡 総括: {market_comment}\n\n"
+    
+    cards_html = ""
+    for s in stocks:
+        code = s.get("code", "").upper()
+        name = stock_dict.get(code, s.get("name", f"銘柄 {code}"))
+        rank = s.get("rank", "B")
+        breakout = s.get("breakout_quality", "")
+        fund = s.get("fundamentals", {})
+        tech = s.get("technical", {})
+        reason = s.get("analysis_reason", "")
+        action = s.get("action_plan", "観察継続")
+        
+        # ランクに応じたネオンカラー設定
+        rank_color = "text-fuchsia-400 border-fuchsia-500 bg-fuchsia-950/40" if rank in ["S", "A"] else "text-cyan-400 border-cyan-500 bg-cyan-950/40"
+        
+        # LINEテキスト用に追加
+        line_text += f"▪️ [{code}] {name} (評価:{rank})\n  原動力: {fund.get('catalyst', 'N/A')}\n  アクション: {action}\n\n"
+        
+        js_safe_name = name.replace("'", "\\'").replace('"', '\\"')
+        
+        cards_html += f"""
+        <div class="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/80 transition p-5 space-y-3 relative group shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+            <div class="flex justify-between items-start gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 text-xs font-bold border {rank_color}">RANK {rank}</span>
+                    <a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-cyan-400 hover:text-fuchsia-400 font-bold text-lg font-mono flex items-center gap-1 underline decoration-cyan-500/50">
+                        <span>[ {code} ] {name}</span>
+                        <span class="text-xs text-yellow-400">🔗</span>
+                    </a>
+                </div>
+                <button onclick="toggleInlineStock('{code}', '{js_safe_name}', event)" class="bg-slate-800 hover:bg-fuchsia-900 text-yellow-400 border border-fuchsia-500/40 px-2.5 py-1 text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="監視リストに登録/解除">
+                    ⭐ WATCH
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono text-slate-300 bg-black/40 p-3 border border-slate-800/80">
+                <div><span class="text-slate-500">ブレイクの質:</span> <span class="text-fuchsia-300">{breakout}</span></div>
+                <div><span class="text-slate-500">アクション:</span> <span class="text-yellow-300 font-bold">{action}</span></div>
+                <div class="md:col-span-2"><span class="text-slate-500">原動力・材料:</span> <span class="text-slate-200">{fund.get('catalyst', 'N/A')}</span></div>
+                <div><span class="text-slate-500">出来高急増:</span> <span class="text-cyan-300">{'あり' if tech.get('volume_surge') else '確認中'}</span></div>
+                <div><span class="text-slate-500">トレンド:</span> <span class="text-cyan-300">{tech.get('moving_average_trend', '上向き')}</span></div>
+            </div>
+            
+            <p class="text-xs text-slate-300 leading-relaxed font-sans border-l-2 border-cyan-500/60 pl-3 py-0.5">
+                {reason}
+            </p>
+        </div>
+        """
+
     watchlist_js = """
     <script>
         let watchlist = JSON.parse(localStorage.getItem('cyber_stock_watchlist') || '[]');
@@ -329,6 +381,7 @@ def create_dashboard_html(report_text, stock_dict):
     </div>
     """
 
+    # レポート個別HTMLページ
     report_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
@@ -360,7 +413,16 @@ def create_dashboard_html(report_text, stock_dict):
                 <span class="text-yellow-400">[ <span id="watch-count">0</span> ]</span>
             </button>
         </header>
-        <main class="bg-slate-950/90 rounded-none p-6 shadow-[0_0_20px_rgba(217,70,239,0.2)] border border-fuchsia-500/50 whitespace-pre-wrap leading-relaxed text-slate-200 text-sm md:text-base border-l-4 border-l-fuchsia-500">{linked_report}</main>
+        
+        <!-- MARKET TREND COMMENT -->
+        <section class="bg-slate-950 border border-fuchsia-500/60 p-4 text-xs font-mono text-slate-300 shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+            <span class="text-fuchsia-400 font-bold">💡 MARKET OVERVIEW:</span> {market_comment}
+        </section>
+
+        <!-- CARDS CONTAINER -->
+        <main class="space-y-4">
+            {cards_html}
+        </main>
     </div>
     {watchlist_modal_html}
     {watchlist_js}
@@ -371,6 +433,7 @@ def create_dashboard_html(report_text, stock_dict):
     with open(today_file_path, "w", encoding="utf-8") as f:
         f.write(report_html)
         
+    # アーカイブリンク一覧の更新
     files = sorted(os.listdir(reports_dir), reverse=True)
     archive_links = ""
     for file in files:
@@ -383,6 +446,7 @@ def create_dashboard_html(report_text, stock_dict):
             </a>
             </li>\n'''
             
+    # メインダッシュボード（index.html）
     index_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
@@ -399,7 +463,6 @@ def create_dashboard_html(report_text, stock_dict):
             background-size: 24px 24px;
         }}
         .neon-glow-cyan {{ box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }}
-        .neon-glow-fuchsia {{ box-shadow: 0 0 15px rgba(217, 70, 239, 0.3); }}
     </style>
 </head>
 <body class="bg-black text-slate-100 min-h-screen p-4 md:p-8 cyber-bg selection:bg-fuchsia-500 selection:text-black">
@@ -431,14 +494,16 @@ def create_dashboard_html(report_text, stock_dict):
         <section class="bg-slate-950/90 border border-cyan-500/60 neon-glow-cyan p-6 space-y-4">
             <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3">
                 <h2 class="text-lg md:text-xl font-bold text-cyan-400 tracking-wide flex items-center gap-2">
-                    <span>🔥 LATEST SCREENING REPORT</span>
+                    <span>🔥 LATEST SCREENING CARDS</span>
                     <span class="text-xs text-fuchsia-400 border border-fuchsia-500/50 px-2 py-0.5">{today_display}</span>
                 </h2>
                 <a href="reports/{today_str}.html" class="text-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold px-3 py-1.5 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
-                    EXPAND FULL SCREEN ↗
+                    EXPAND FULL CARDS ↗
                 </a>
             </div>
-            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-200 border-l-2 border-fuchsia-500 pl-4 max-h-[500px] overflow-y-auto font-sans">{linked_report}</div>
+            <div class="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                {cards_html}
+            </div>
         </section>
         
         <!-- ARCHIVE LOGS -->
@@ -460,9 +525,10 @@ def create_dashboard_html(report_text, stock_dict):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】エラー対策強化版ダッシュボードの生成が完了しました。")
+    print("【成功】カード型UI＆JSON出力対応ダッシュボードの生成が完了しました。")
+    return line_text
 
-def send_line_push_message(report_text):
+def send_line_push_message(line_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
     line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
     line_user_id = os.environ.get("LINE_USER_ID", "").strip()
@@ -478,7 +544,7 @@ def send_line_push_message(report_text):
         "messages": [
             {
                 "type": "text",
-                "text": report_text[:4500]
+                "text": line_text[:4500]
             }
         ]
     }
@@ -501,14 +567,14 @@ def main():
     print("2. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
     stock_data, stock_dict = fetch_new_high_stocks()
     
-    print("3. Gemini APIでスクリーニング分析中...")
-    report = generate_analysis_report(stock_data)
+    print("3. Gemini APIでJSON構造化スクリーニング分析中...")
+    json_data = generate_analysis_report(stock_data)
     
-    print("4. エラー対策強化版ダッシュボード＆過去ログを自動生成中...")
-    create_dashboard_html(report, stock_dict)
+    print("4. カード型サイバーパンク風ダッシュボード＆過去ログを自動生成中...")
+    line_message = create_dashboard_html(json_data, stock_dict)
     
     print("5. LINEへレポートを配信中...")
-    send_line_push_message(report)
+    send_line_push_message(line_message)
 
 if __name__ == "__main__":
     main()
