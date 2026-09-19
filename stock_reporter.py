@@ -55,7 +55,7 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35])
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（混雑・エラー対策強化版）"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（gemini-3.6-flash・エラー対策版）"""
     client = genai.Client()
     
     system_prompt = """
@@ -83,14 +83,11 @@ def generate_analysis_report(stock_data_text):
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
     
-    # 混雑時に備えてリトライ回数と待機時間を強化 (15秒, 30秒, 45秒, 60秒, 90秒)
+    model_name = "gemini-3.6-flash"
     max_retries = 5
     retry_delays = [15, 30, 45, 60, 90]
     
     for attempt in range(1, max_retries + 1):
-        # 試行後半（4回目以降）は安定性の高いモデルへ自動切替
-        model_name = "gemini-2.5-flash" if attempt <= 3 else "gemini-1.5-flash"
-        
         try:
             response = client.models.generate_content(
                 model=model_name,
@@ -123,27 +120,23 @@ def create_dashboard_html(report_text):
         code = match.group(1)
         name = match.group(2).strip()
         
-        # 評価ランクなどの文字が誤検出された場合のガード
         if name in ['S', 'A', 'B', 'C', '評価', 'ランク', '短評', '最優先注目銘柄', 'その他の注目銘柄']:
             name = f"銘柄 {code}"
             
         return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{name}</span><button onclick="toggleInlineStock('{code}', '{name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
-    # パターン1: 「7203 トヨタ自動車」のようなコード＋名前の組み合わせを置換
     linked_report = re.sub(
         r'\b(\d{4})\b[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)',
         replace_stock_with_name,
         report_text
     )
     
-    # パターン2: 単体で残ったコードのフォールバック置換
     linked_report = re.sub(
         r'(?<!\[ )\b(\d{4})\b(?!\.T)',
         r"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a><button onclick="toggleInlineStock('\1', '', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>""",
         linked_report
     )
     
-    # 共通JavaScript (監視リスト用)
     watchlist_js = """
     <script>
         let watchlist = JSON.parse(localStorage.getItem('cyber_stock_watchlist') || '[]');
@@ -266,7 +259,6 @@ def create_dashboard_html(report_text):
     </script>
     """
 
-    # 監視リストモーダルの共通HTML
     watchlist_modal_html = """
     <!-- WATCHLIST MODAL -->
     <div id="watchlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden justify-center items-center p-4">
@@ -300,7 +292,6 @@ def create_dashboard_html(report_text):
     </div>
     """
 
-    # 日別レポート用サイバーパンクHTML
     report_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
@@ -343,7 +334,6 @@ def create_dashboard_html(report_text):
     with open(today_file_path, "w", encoding="utf-8") as f:
         f.write(report_html)
         
-    # 過去ログリンクのサイバー調表示
     files = sorted(os.listdir(reports_dir), reverse=True)
     archive_links = ""
     for file in files:
@@ -356,7 +346,6 @@ def create_dashboard_html(report_text):
             </a>
             </li>\n'''
             
-    # メインダッシュボード（index.html）サイバーパンクデザイン
     index_html = f"""<!DOCTYPE html>
 <html lang="ja" class="dark">
 <head>
@@ -434,7 +423,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】銘柄名完全埋め込み＆エラー対策ダッシュボードの生成が完了しました。")
+    print("【成功】Gemini 3.6 Flash＆エラー対策ダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -478,7 +467,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. 銘柄名完全埋め込み＆エラー対策ダッシュボードを自動生成中...")
+    print("4. ダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
