@@ -348,6 +348,31 @@ h1 { font-size: 1.5rem; color: var(--cyan); text-transform: uppercase; }
   color: var(--cyan); padding: 10px 20px; font-size: 0.85rem; z-index: 1000;
   display: none; box-shadow: 0 0 10px rgba(0,240,255,0.3);
 }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 900;
+  display: none; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--panel-bg); border: 1px solid var(--fuchsia); max-width: 480px; width: 100%;
+  max-height: 80vh; display: flex; flex-direction: column; padding: 1.2rem;
+}
+.modal-box h2 { font-size: 1rem; color: var(--fuchsia); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+.modal-close:hover { color: var(--fuchsia); }
+#watchlist-items { list-style: none; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+#watchlist-items li {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+  background: #090d16; border: 1px solid var(--border-color); padding: 0.5rem 0.7rem; font-size: 0.85rem;
+}
+#watchlist-items a { color: var(--cyan); text-decoration: none; }
+#watchlist-items a:hover { color: var(--fuchsia); }
+.remove-btn {
+  background: none; border: 1px solid var(--border-color); color: var(--text-muted);
+  font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; flex-shrink: 0;
+}
+.remove-btn:hover { border-color: var(--fuchsia); color: var(--fuchsia); }
+.watchlist-empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0; }
 @media(max-width: 600px) {
   .grid-2 { grid-template-columns: 1fr; }
   .archive-list { grid-template-columns: 1fr; }
@@ -365,8 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function updateWatchCount() {
-    const el = document.getElementById('watch-count');
-    if (el) el.textContent = watchlist.length;
+    document.querySelectorAll('.watch-count').forEach(el => { el.textContent = watchlist.length; });
 }
 
 function showToast(message) {
@@ -379,9 +403,27 @@ function showToast(message) {
 
 function setupEventDelegation() {
     document.body.addEventListener('click', (e) => {
-        const btn = e.target.closest('.watch-btn');
-        if (!btn) return;
-        toggleWatchlist(btn.dataset.code, btn.dataset.name);
+        const watchBtn = e.target.closest('.watch-btn');
+        if (watchBtn) {
+            toggleWatchlist(watchBtn.dataset.code, watchBtn.dataset.name);
+            return;
+        }
+        const openBtn = e.target.closest('.open-watchlist-btn');
+        if (openBtn) {
+            renderWatchlistModal();
+            document.getElementById('watchlist-modal').classList.add('open');
+            return;
+        }
+        const closeBtn = e.target.closest('.modal-close, .modal-overlay');
+        if (closeBtn && (e.target.classList.contains('modal-close') || e.target.classList.contains('modal-overlay'))) {
+            document.getElementById('watchlist-modal').classList.remove('open');
+            return;
+        }
+        const removeBtn = e.target.closest('.remove-btn');
+        if (removeBtn) {
+            removeFromWatchlist(removeBtn.dataset.code);
+            return;
+        }
     });
 }
 
@@ -397,6 +439,31 @@ function toggleWatchlist(code, name) {
     }
     localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
     updateWatchCount();
+    renderWatchlistModal();
+}
+
+function removeFromWatchlist(code) {
+    watchlist = watchlist.filter(item => item.code !== code);
+    localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+    updateWatchCount();
+    renderWatchlistModal();
+}
+
+function renderWatchlistModal() {
+    const listEl = document.getElementById('watchlist-items');
+    if (!listEl) return;
+
+    if (watchlist.length === 0) {
+        listEl.innerHTML = '<li class="watchlist-empty">監視銘柄はまだ登録されていません</li>';
+        return;
+    }
+
+    listEl.innerHTML = watchlist.map(item => `
+        <li>
+            <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank">[ ${item.code} ] ${item.name}</a>
+            <button class="remove-btn" data-code="${item.code}">解除</button>
+        </li>
+    `).join('');
 }
 """
     with open(os.path.join(assets_dir, "app.js"), "w", encoding="utf-8") as f:
@@ -434,6 +501,15 @@ def build_line_messages(data, today_display, max_len=4500, max_messages=5):
         messages.append(current)
 
     return messages[:max_messages]
+
+WATCHLIST_MODAL_HTML = """
+    <div id="watchlist-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>⭐ 監視リスト <button class="modal-close" aria-label="閉じる">✕</button></h2>
+            <ul id="watchlist-items"></ul>
+        </div>
+    </div>
+"""
 
 def create_dashboard_html(data, stock_dict):
     """軽量CSS/JSを用いた高速HTMLファイルおよびアーカイブを生成します"""
@@ -534,7 +610,7 @@ def create_dashboard_html(data, stock_dict):
                 <a href="../index.html" style="color:var(--fuchsia); font-size:0.8rem; text-decoration:none;">≪ DASHBOARD</a>
                 <h1>⚡ ANALYSIS // {today_display}</h1>
             </div>
-            <div>⭐ WATCHLIST: <span id="watch-count" style="color:var(--yellow);">0</span></div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
         </header>
 
         <div class="overview-box">
@@ -545,6 +621,7 @@ def create_dashboard_html(data, stock_dict):
         {sources_html}
         {disclaimer_html}
     </div>
+    {WATCHLIST_MODAL_HTML}
     <div id="toast"></div>
     <script src="../assets/app.js"></script>
 </body>
@@ -586,7 +663,7 @@ def create_dashboard_html(data, stock_dict):
                 <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
                 <h1>⚡ NEW-HIGH TERMINAL</h1>
             </div>
-            <div>⭐ WATCHLIST: <span id="watch-count" style="color:var(--yellow);">0</span></div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
         </header>
 
         <div class="overview-box">
@@ -602,6 +679,7 @@ def create_dashboard_html(data, stock_dict):
             <ul class="archive-list">{archive_links}</ul>
         </section>
     </div>
+    {WATCHLIST_MODAL_HTML}
     <div id="toast"></div>
     <script src="assets/app.js"></script>
 </body>
