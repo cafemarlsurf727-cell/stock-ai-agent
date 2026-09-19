@@ -100,7 +100,7 @@ def generate_analysis_report(stock_data_text):
                 sys.exit(1)
 
 def create_dashboard_html(report_text):
-    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（監視リスト機能付き）を作成します"""
+    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（ワンタップ監視機能付き）を作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
@@ -110,10 +110,10 @@ def create_dashboard_html(report_text):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換
+    # 銘柄コード（4桁数字）を「Yahoo!ファイナンスリンク ＋ ワンタップ⭐登録ボタン」に自動変換
     linked_report = re.sub(
         r'\b(\d{4})\b',
-        r'<a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a>',
+        r"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a><button onclick="toggleInlineStock('\1', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>""",
         report_text
     )
     
@@ -140,6 +140,36 @@ def create_dashboard_html(report_text):
             } else {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
+            }
+        }
+
+        function toggleInlineStock(code, ev) {
+            if (ev) ev.preventDefault();
+            const index = watchlist.findIndex(item => item.code === code);
+            
+            if (index >= 0) {
+                const removed = watchlist.splice(index, 1)[0];
+                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+                updateWatchlistCount();
+                renderWatchlist();
+                alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
+            } else {
+                let name = '銘柄 ' + code;
+                if (ev && ev.currentTarget) {
+                    const parentBlock = ev.currentTarget.closest('p, div, li, span') || ev.currentTarget.parentElement;
+                    if (parentBlock) {
+                        const text = parentBlock.textContent || '';
+                        const match = text.match(new RegExp(code + '[\\\\s/|：:]*([^\\\\s\\\\n/()/（）:：A-Z]+)'));
+                        if (match && match[1] && match[1].length > 1) {
+                            name = match[1].trim();
+                        }
+                    }
+                }
+                watchlist.push({ code, name });
+                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+                updateWatchlistCount();
+                renderWatchlist();
+                alert(`⭐ [ ${code} ] ${name} を監視リストに登録しました！`);
             }
         }
 
@@ -181,7 +211,7 @@ def create_dashboard_html(report_text):
             if (!listEl) return;
 
             if (watchlist.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-500 text-xs py-4 text-center font-mono">NO WATCHLIST TARGETS REGISTERED</li>';
+                listEl.innerHTML = '<li class="text-slate-500 text-xs py-4 text-center font-mono">監視銘柄は登録されていません</li>';
                 return;
             }
 
@@ -192,8 +222,8 @@ def create_dashboard_html(report_text):
                         <span class="text-slate-200 text-sm hover:underline">${item.name}</span>
                         <span class="text-xs text-yellow-400">🔗</span>
                     </a>
-                    <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-0.5 hover:bg-red-950 transition">
-                        DEL
+                    <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-white bg-red-950/60 hover:bg-red-600 border border-red-500/40 px-2.5 py-1 transition font-bold flex items-center gap-1 shadow-[0_0_5px_rgba(239,68,68,0.3)]">
+                        🗑️ 監視解除
                     </button>
                 </li>
             `).join('');
@@ -369,7 +399,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】監視リスト機能付きサイバーパンク風HTMLダッシュボードと過去ログの生成が完了しました。")
+    print("【成功】ワンタップ登録＆監視解除機能付きダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -413,7 +443,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. サイバーパンク風HTMLダッシュボード＆過去ログ（監視リスト付き）を自動生成中...")
+    print("4. ワンタップ登録機能付きダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
