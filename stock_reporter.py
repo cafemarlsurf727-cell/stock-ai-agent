@@ -92,8 +92,9 @@ def generate_analysis_report(stock_data_text):
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
-    line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-    line_user_id = os.environ.get("LINE_USER_ID")
+    # 改行や前後の余白を削ぎ落とす .strip() 処理を追加
+    line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
+    line_user_id = os.environ.get("LINE_USER_ID", "").strip()
     
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
