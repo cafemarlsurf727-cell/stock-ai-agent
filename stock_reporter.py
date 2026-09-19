@@ -18,7 +18,7 @@ def check_env_vars():
         sys.exit(1)
 
 def fetch_new_high_stocks():
-    """Yahoo!ファイナンスから本日年初来高値（新高値）更新銘柄データを取得します"""
+    """Yahoo!ファイナンスから年初来高値銘柄データと『コード: 銘柄名』の辞書を取得します"""
     url = "https://finance.yahoo.co.jp/stocks/ranking/yearToDateHigh?market=all"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -38,10 +38,11 @@ def fetch_new_high_stocks():
     
     if not table:
         print("【警告】新高値更新銘柄のテーブル要素が見つかりませんでした。")
-        return "本日新高値更新銘柄のデータ取得に失敗しました。"
+        return "本日新高値更新銘柄のデータ取得に失敗しました。", {}
         
     rows = table.find_all("tr")
     formatted_data = []
+    stock_dict = {}
     
     for row in rows:
         cols = [col.text.strip() for col in row.find_all(["th", "td"])]
@@ -49,13 +50,26 @@ def fetch_new_high_stocks():
             clean_cols = [" ".join(c.split()) for c in cols]
             formatted_data.append(" | ".join(clean_cols))
             
+            # コードと銘柄名の対応辞書を自動生成
+            # 通常のテーブル列から 4桁数字(コード) と 社名 を抽出
+            for i, c in enumerate(cols):
+                m = re.search(r'\b(\d{4})\b', c)
+                if m:
+                    code = m.group(1)
+                    # 隣接する列から銘柄名を探す
+                    for j in range(i + 1, min(i + 3, len(cols))):
+                        val = cols[j].strip()
+                        if val and val not in ['東証P', '東証S', '東証G', 'プライム', 'スタンダード', 'グロース', '名証', '札証', '福証']:
+                            stock_dict[code] = val
+                            break
+            
     if len(formatted_data) <= 1:
-        return "本日新高値更新銘柄のデータが見つかりませんでした。"
+        return "本日新高値更新銘柄のデータが見つかりませんでした。", {}
         
-    return "\n".join(formatted_data[:35])
+    return "\n".join(formatted_data[:35]), stock_dict
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（gemini-3.6-flash・エラー対策版）"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します"""
     client = genai.Client()
     
     system_prompt = """
@@ -104,7 +118,7 @@ def generate_analysis_report(stock_data_text):
                 print("【エラー】規定の再試行回数を超えたため処理を中断します。")
                 sys.exit(1)
 
-def create_dashboard_html(report_text):
+def create_dashboard_html(report_text, stock_dict):
     """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボードを作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
@@ -115,28 +129,27 @@ def create_dashboard_html(report_text):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # Python側で「コード」と「銘柄名」をセットで認識してHTMLに埋め込む
-    def replace_stock_with_name(match):
+    # 銘柄置換処理：元データの辞書から社名を完全紐付け
+    def replace_stock_code(match):
         code = match.group(1)
-        name = match.group(2).strip()
         
-        if name in ['S', 'A', 'B', 'C', '評価', 'ランク', '短評', '最優先注目銘柄', 'その他の注目銘柄']:
-            name = f"銘柄 {code}"
-            
+        # 1. Yahoo!元データ辞書から会社名を取得
+        name = stock_dict.get(code, "")
+        
+        # 2. 辞書になければレポート文脈から検索（フォールバック）
+        if not name:
+            start_pos = match.end()
+            after_text = report_text[start_pos:start_pos+30]
+            m_name = re.search(r'^[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-]+)', after_text)
+            if m_name and m_name.group(1) not in ['S', 'A', 'B', 'C', '評価', 'ランク', '短評']:
+                name = m_name.group(1).strip()
+            else:
+                name = f"銘柄 {code}"
+                
         return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{name}</span><button onclick="toggleInlineStock('{code}', '{name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
-    # 正規表現内の文字指定エラーを修復 (ー─＋+\-)
-    linked_report = re.sub(
-        r'\b(\d{4})\b[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-]+)',
-        replace_stock_with_name,
-        report_text
-    )
-    
-    linked_report = re.sub(
-        r'(?<!\[ )\b(\d{4})\b(?!\.T)',
-        r"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ \1 ]</a><button onclick="toggleInlineStock('\1', '', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>""",
-        linked_report
-    )
+    # レポート内の4桁数字（銘柄コード）を置換
+    linked_report = re.sub(r'\b(\d{4})\b(?!\.T)', replace_stock_code, report_text)
     
     watchlist_js = """
     <script>
@@ -424,7 +437,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】正規表現修正版ダッシュボードの生成が完了しました。")
+    print("【成功】社名完全紐付けダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -463,13 +476,13 @@ def main():
     check_env_vars()
     
     print("2. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
-    stock_data = fetch_new_high_stocks()
+    stock_data, stock_dict = fetch_new_high_stocks()
     
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. ダッシュボード＆過去ログを自動生成中...")
-    create_dashboard_html(report)
+    print("4. 社名自動紐付けダッシュボード＆過去ログを自動生成中...")
+    create_dashboard_html(report, stock_dict)
     
     print("5. LINEへレポートを配信中...")
     send_line_push_message(report)
