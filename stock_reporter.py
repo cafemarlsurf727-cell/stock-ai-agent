@@ -138,9 +138,9 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
     client = genai.Client()
-    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-2.5-flash")
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-2.5-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-2.5-flash")
+    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.6-flash")
+    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.6-flash")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.6-flash")
 
     print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
@@ -537,7 +537,6 @@ def create_dashboard_html(data, stock_dict):
         resolved_code = normalize_code(raw_code, stock_dict, raw_name_from_json)
         code = escape_html(resolved_code)
         
-        # 社名の取得と重複ダブりの自動解消
         base_name = stock_dict.get(resolved_code, raw_name_from_json)
         if not base_name:
             base_name = f"銘柄 {resolved_code}"
@@ -776,9 +775,10 @@ def main():
     jst = timezone(timedelta(hours=9))
     today_now = datetime.now(jst)
 
-    #if not args.force and is_market_holiday(today_now):
-    #    print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
-    #    sys.exit(0)
+    # 休日判定（必要に応じてコメントアウトしてテストしてください）
+    if not args.force and is_market_holiday(today_now):
+        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
+        sys.exit(0)
 
     print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
     build_static_assets()
