@@ -14,11 +14,12 @@ def check_env_vars():
         print("GitHub Secretsの設定名を確認してください。")
         sys.exit(1)
 
-def fetch_kabutan_new_highs():
-    """株探から本日新高値更新銘柄データを取得します"""
-    url = "https://kabutan.jp/warning/?mode=2_1"
+def fetch_new_high_stocks():
+    """Yahoo!ファイナンスから本日年初来高値（新高値）更新銘柄データを取得します"""
+    url = "https://finance.yahoo.co.jp/stocks/ranking/yearToDateHigh?market=all"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
     }
     
     try:
@@ -26,11 +27,11 @@ def fetch_kabutan_new_highs():
         response.raise_for_status()
         response.encoding = response.apparent_encoding
     except Exception as e:
-        print(f"【エラー】株探からのデータ取得に失敗しました: {e}")
+        print(f"【エラー】Yahoo!ファイナンスからのデータ取得に失敗しました: {e}")
         sys.exit(1)
         
     soup = BeautifulSoup(response.text, "html.parser")
-    table = soup.find("table", class_="stock_table")
+    table = soup.find("table")
     
     if not table:
         print("【警告】新高値更新銘柄のテーブル要素が見つかりませんでした。")
@@ -42,8 +43,13 @@ def fetch_kabutan_new_highs():
     for row in rows:
         cols = [col.text.strip() for col in row.find_all(["th", "td"])]
         if cols:
-            formatted_data.append(" | ".join(cols[:8]))
+            # 各列の余分な改行や空白を整理
+            clean_cols = [" ".join(c.split()) for c in cols]
+            formatted_data.append(" | ".join(clean_cols))
             
+    if len(formatted_data) <= 1:
+        return "本日新高値更新銘柄のデータが見つかりませんでした。"
+        
     return "\n".join(formatted_data[:35])
 
 def generate_analysis_report(stock_data_text):
@@ -52,7 +58,7 @@ def generate_analysis_report(stock_data_text):
     
     system_prompt = """
 あなたは「新高値ブレイク投資法」の専門家です。
-提供された株探の新高値更新銘柄リストから、業績背景・出来高・上昇モメンタムを考慮し、
+提供されたYahoo!ファイナンスの年初来高値更新銘柄リストから、業績背景・出来高・上昇モメンタムを考慮し、
 「本物の新高値銘柄」をスクリーニングして簡潔なLINE用レポートを作成してください。
 
 【出力フォーマット】
@@ -121,8 +127,8 @@ def main():
     print("1. 環境変数のチェック中...")
     check_env_vars()
     
-    print("2. 株探から新高値更新銘柄データを取得中...")
-    stock_data = fetch_kabutan_new_highs()
+    print("2. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
+    stock_data = fetch_new_high_stocks()
     
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
