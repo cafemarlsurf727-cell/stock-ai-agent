@@ -2,9 +2,11 @@ name: Daily Stock Report
 
 on:
   schedule:
-    # 平日（月〜金）の日本時間17:30（UTC 08:30）に自動実行
     - cron: '30 8 * * 1-5'
-  workflow_dispatch: # 手動で即時テスト実行できるボタンを作成
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -29,3 +31,11 @@ jobs:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: python stock_reporter.py
+
+      - name: Commit and push generated dashboard
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/
+          git diff-index --quiet HEAD || git commit -m "Auto-update dashboard and report archive"
+          git push
