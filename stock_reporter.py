@@ -776,9 +776,9 @@ def main():
     jst = timezone(timedelta(hours=9))
     today_now = datetime.now(jst)
 
-    if not args.force and is_market_holiday(today_now):
-        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
-        sys.exit(0)
+    #if not args.force and is_market_holiday(today_now):
+    #    print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
+    #    sys.exit(0)
 
     print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
     build_static_assets()
