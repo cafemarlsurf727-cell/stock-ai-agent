@@ -67,7 +67,7 @@ def generate_analysis_report(stock_data_text):
 📊 本日の新高値精鋭レポート
 
 🏆 最優先注目銘柄
-・コード / 銘柄名 / 評価ランク（SまたはA）
+・コード 銘柄名 (評価ランク SまたはA)
 ・原動力（業績サプライズ・材料）
 ・テクニカル/出来高評価
 ・アクションプラン
@@ -78,7 +78,7 @@ def generate_analysis_report(stock_data_text):
 💡 本日の総括・相場感
 ・市場傾向と観察のワンポイントアドバイス
 
-※読みやすいよう適度に絵文字や改行を活用してください。
+※各銘柄の表記は「4桁コード 銘柄名」の形式（例: 7203 トヨタ自動車）を徹底し、読みやすいよう適度に絵文字や改行を活用してください。
 """
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
@@ -100,7 +100,7 @@ def generate_analysis_report(stock_data_text):
                 sys.exit(1)
 
 def create_dashboard_html(report_text):
-    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（ワンタップ監視機能付き）を作成します"""
+    """Webサイト（GitHub Pages）用のサイバーパンク風HTMLダッシュボード（銘柄名自動読み取り＆編集機能付き）を作成します"""
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst)
     today_str = now.strftime("%Y-%m-%d")
@@ -143,6 +143,27 @@ def create_dashboard_html(report_text):
             }
         }
 
+        function extractStockName(lineText, code) {
+            if (!lineText) return '';
+            const idx = lineText.indexOf(code);
+            if (idx !== -1) {
+                // 1. コードの後ろから銘柄名を取得 (例: "7203 トヨタ自動車")
+                let after = lineText.substring(idx + code.length).replace(/^[\]\s/|:：・\-\)\］\】]+/, '');
+                let mAfter = after.match(/^([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)/);
+                if (mAfter && mAfter[1] && !['評価', 'ランク', '短評', '⭐', 'S', 'A', 'B'].includes(mAfter[1].trim())) {
+                    return mAfter[1].trim();
+                }
+                
+                // 2. コードの前から銘柄名を取得 (例: "トヨタ自動車 (7203)")
+                let before = lineText.substring(0, idx).replace(/[\s/|:：・\(\（\［\【]+$/, '');
+                let mBefore = before.match(/([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)$/);
+                if (mBefore && mBefore[1] && !['コード', '銘柄', '銘柄名', '・', '🏆', '🔍'].includes(mBefore[1].trim())) {
+                    return mBefore[1].trim();
+                }
+            }
+            return '';
+        }
+
         function toggleInlineStock(code, ev) {
             if (ev) ev.preventDefault();
             const index = watchlist.findIndex(item => item.code === code);
@@ -154,22 +175,24 @@ def create_dashboard_html(report_text):
                 renderWatchlist();
                 alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
             } else {
-                let name = '銘柄 ' + code;
+                let detectedName = '';
                 if (ev && ev.currentTarget) {
-                    const parentBlock = ev.currentTarget.closest('p, div, li, span') || ev.currentTarget.parentElement;
-                    if (parentBlock) {
-                        const text = parentBlock.textContent || '';
-                        const match = text.match(new RegExp(code + '[\\\\s/|：:]*([^\\\\s\\\\n/()/（）:：A-Z]+)'));
-                        if (match && match[1] && match[1].length > 1) {
-                            name = match[1].trim();
-                        }
+                    const parent = ev.currentTarget.closest('p, div, li') || ev.currentTarget.parentElement;
+                    if (parent) {
+                        detectedName = extractStockName(parent.textContent || '', code);
                     }
                 }
+                
+                const defaultName = detectedName || ('銘柄 ' + code);
+                const finalName = prompt(`⭐ [ ${code} ] を監視リストに登録します。\n銘柄名を確認・変更して「OK」を押してください:`, defaultName);
+                
+                if (finalName === null) return; // キャンセル時
+                
+                const name = finalName.trim() || defaultName;
                 watchlist.push({ code, name });
                 localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
                 updateWatchlistCount();
                 renderWatchlist();
-                alert(`⭐ [ ${code} ] ${name} を監視リストに登録しました！`);
             }
         }
 
@@ -199,6 +222,18 @@ def create_dashboard_html(report_text):
             renderWatchlist();
         }
 
+        function editStockName(code) {
+            const item = watchlist.find(i => i.code === code);
+            if (!item) return;
+            
+            const newName = prompt(`[ ${code} ] の新しい銘柄名を入力してください:`, item.name);
+            if (newName !== null && newName.trim() !== '') {
+                item.name = newName.trim();
+                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+                renderWatchlist();
+            }
+        }
+
         function removeStockFromWatchlist(code) {
             watchlist = watchlist.filter(item => item.code !== code);
             localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
@@ -216,15 +251,22 @@ def create_dashboard_html(report_text):
             }
 
             listEl.innerHTML = watchlist.map(item => `
-                <li class="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition font-mono">
-                    <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-cyan-400 hover:text-fuchsia-400 font-bold flex items-center gap-2">
-                        <span class="text-fuchsia-400">[ ${item.code} ]</span>
-                        <span class="text-slate-200 text-sm hover:underline">${item.name}</span>
-                        <span class="text-xs text-yellow-400">🔗</span>
-                    </a>
-                    <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-white bg-red-950/60 hover:bg-red-600 border border-red-500/40 px-2.5 py-1 transition font-bold flex items-center gap-1 shadow-[0_0_5px_rgba(239,68,68,0.3)]">
-                        🗑️ 監視解除
-                    </button>
+                <li class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition font-mono gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden flex-1">
+                        <span class="text-fuchsia-400 font-bold shrink-0">[ ${item.code} ]</span>
+                        <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-slate-100 hover:text-cyan-400 font-bold text-sm truncate flex items-center gap-1 hover:underline" title="Yahoo!ファイナンスでチャートを開く">
+                            <span>${item.name || '銘柄名未設定'}</span>
+                            <span class="text-xs text-yellow-400 shrink-0">🔗</span>
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="editStockName('${item.code}')" class="text-xs text-cyan-400 hover:text-white bg-slate-800 hover:bg-cyan-900 border border-cyan-500/30 px-2 py-1 transition font-bold" title="銘柄名を編集">
+                            ✏️ 編集
+                        </button>
+                        <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-white bg-red-950/60 hover:bg-red-600 border border-red-500/40 px-2 py-1 transition font-bold flex items-center gap-1 shadow-[0_0_5px_rgba(239,68,68,0.3)]">
+                            🗑️ 監視解除
+                        </button>
+                    </div>
                 </li>
             `).join('');
         }
@@ -235,7 +277,7 @@ def create_dashboard_html(report_text):
     watchlist_modal_html = """
     <!-- WATCHLIST MODAL -->
     <div id="watchlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden justify-center items-center p-4">
-        <div class="bg-slate-950 border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)] w-full max-w-md p-6 space-y-4 font-mono">
+        <div class="bg-slate-950 border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)] w-full max-w-lg p-6 space-y-4 font-mono">
             <div class="flex justify-between items-center border-b border-fuchsia-500/40 pb-3">
                 <h3 class="text-lg font-bold text-fuchsia-400 flex items-center gap-2">
                     <span>⭐ TARGET WATCHLIST</span>
@@ -245,10 +287,10 @@ def create_dashboard_html(report_text):
 
             <!-- ADD FORM -->
             <div class="space-y-2 bg-slate-900/80 p-3 border border-slate-800">
-                <p class="text-xs text-cyan-400">ADD NEW WATCH TARGET:</p>
+                <p class="text-xs text-cyan-400">手動で監視対象を追加:</p>
                 <div class="flex gap-2">
-                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-24 focus:outline-none focus:border-cyan-400">
-                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
+                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-28 focus:outline-none focus:border-cyan-400">
+                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ自動車)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
                     <button onclick="addStockToWatchlist()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold text-xs px-3 py-2 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
                         + ADD
                     </button>
@@ -256,7 +298,7 @@ def create_dashboard_html(report_text):
             </div>
 
             <!-- WATCHLIST ITEMS -->
-            <ul id="watchlist-items" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+            <ul id="watchlist-items" class="space-y-2 max-h-64 overflow-y-auto pr-1"></ul>
 
             <div class="pt-2 text-right">
                 <button onclick="toggleWatchlistModal()" class="text-xs text-slate-400 hover:text-slate-200 border border-slate-700 px-3 py-1">CLOSE</button>
@@ -399,7 +441,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】ワンタップ登録＆監視解除機能付きダッシュボードの生成が完了しました。")
+    print("【成功】銘柄名自動読み取り＆編集機能付きダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -443,7 +485,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. ワンタップ登録機能付きダッシュボード＆過去ログを自動生成中...")
+    print("4. 銘柄名自動判定・編集機能付きダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report)
     
     print("5. LINEへレポートを配信中...")
