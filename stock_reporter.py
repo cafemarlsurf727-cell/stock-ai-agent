@@ -35,7 +35,7 @@ def fetch_new_high_stocks():
         
     soup = BeautifulSoup(response.text, "html.parser")
     
-    # 1. ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を作成（英字混在コード 130A 等に対応）
+    # ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を作成（英字混在コード 130A 等に対応）
     stock_dict = {}
     for a in soup.find_all("a", href=True):
         m = re.search(r'/quote/([0-9A-Za-z]{4})\.T', a['href'], re.IGNORECASE)
@@ -68,7 +68,7 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35]), stock_dict
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（429クォータエラー＆503対策強化版）"""
     client = genai.Client()
     
     system_prompt = """
@@ -98,7 +98,6 @@ def generate_analysis_report(stock_data_text):
     
     model_name = "gemini-3.6-flash"
     max_retries = 5
-    retry_delays = [15, 30, 45, 60, 90]
     
     for attempt in range(1, max_retries + 1):
         try:
@@ -108,10 +107,18 @@ def generate_analysis_report(stock_data_text):
             )
             return response.text
         except Exception as e:
+            err_msg = str(e)
             print(f"【警告】Gemini API ({model_name}) の試行 ({attempt}/{max_retries}) に失敗しました: {e}")
+            
             if attempt < max_retries:
-                delay = retry_delays[attempt - 1]
-                print(f"--> {delay}秒間待機してから再試行します...")
+                # 429エラー（リクエスト制限・制限超過）の場合は60秒しっかり待つ
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    delay = 65
+                    print(f"--> レート制限（429）を検知しました。{delay}秒間待機してから再試行します...")
+                else:
+                    delay = attempt * 15
+                    print(f"--> {delay}秒間待機してから再試行します...")
+                
                 time.sleep(delay)
             else:
                 print("【エラー】規定の再試行回数を超えたため処理を中断します。")
@@ -128,13 +135,11 @@ def create_dashboard_html(report_text, stock_dict):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄コードと銘柄名をセットで完全置換する関数
     def replace_stock_match(match):
         code = match.group(1).upper()
         inline_name = match.group(2) if match.group(2) else ""
         inline_name = inline_name.strip()
         
-        # 日付(2026年等)や数字の誤検出防止
         if code in ['2024', '2025', '2026', '2027', '2028', '2029', '2030'] and code not in stock_dict:
             return match.group(0)
             
@@ -145,7 +150,6 @@ def create_dashboard_html(report_text, stock_dict):
         if inline_name in invalid_words:
             inline_name = ""
             
-        # 会社名の決定（優先度: stock_dict > 本文抽出名）
         final_name = stock_dict.get(code, "")
         if not final_name and inline_name:
             final_name = inline_name
@@ -156,7 +160,6 @@ def create_dashboard_html(report_text, stock_dict):
         
         return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{final_name}</span><button onclick="toggleInlineStock('{code}', '{js_safe_name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
-    # 正規表現: 数字で始まる英数字4桁（7203, 130A, 255A 等に対応）
     pattern = r'\b(\d[0-9A-Za-z]{3})\b(?:[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-（）\(\)]+))?'
     linked_report = re.sub(pattern, replace_stock_match, report_text)
     
@@ -457,7 +460,7 @@ def create_dashboard_html(report_text, stock_dict):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】英字入り銘柄コード（130A等）完全対応版ダッシュボードの生成が完了しました。")
+    print("【成功】エラー対策強化版ダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -501,7 +504,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. 英字入り銘柄コード完全対応ダッシュボード＆過去ログを自動生成中...")
+    print("4. エラー対策強化版ダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report, stock_dict)
     
     print("5. LINEへレポートを配信中...")
