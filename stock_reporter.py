@@ -125,8 +125,9 @@ def create_dashboard_html(report_text):
             
         return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{name}</span><button onclick="toggleInlineStock('{code}', '{name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
+    # 正規表現内の文字指定エラーを修復 (ー─＋+\-)
     linked_report = re.sub(
-        r'\b(\d{4})\b[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー-─＋+]+)',
+        r'\b(\d{4})\b[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-]+)',
         replace_stock_with_name,
         report_text
     )
@@ -423,7 +424,7 @@ def create_dashboard_html(report_text):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】Gemini 3.6 Flash＆エラー対策ダッシュボードの生成が完了しました。")
+    print("【成功】正規表現修正版ダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
