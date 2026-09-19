@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import requests
 from bs4 import BeautifulSoup
 from google import genai
@@ -52,7 +53,7 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35])
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（リトライ処理付き）"""
     client = genai.Client()
     
     system_prompt = """
@@ -80,19 +81,26 @@ def generate_analysis_report(stock_data_text):
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
     
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=[system_prompt, prompt]
-        )
-        return response.text
-    except Exception as e:
-        print(f"【エラー】Gemini APIでのレポート生成に失敗しました: {e}")
-        sys.exit(1)
+    # サーバー混雑対策：最大3回まで再試行
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[system_prompt, prompt]
+            )
+            return response.text
+        except Exception as e:
+            print(f"【警告】Gemini APIの試行 ({attempt}/{max_retries}) に失敗しました: {e}")
+            if attempt < max_retries:
+                print("10秒後に再試行します...")
+                time.sleep(10)
+            else:
+                print("【エラー】規定の再試行回数を超えたため処理を中断します。")
+                sys.exit(1)
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
-    # 改行や前後の余白を削ぎ落とす .strip() 処理を追加
     line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
     line_user_id = os.environ.get("LINE_USER_ID", "").strip()
     
