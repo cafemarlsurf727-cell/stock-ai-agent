@@ -1,7 +1,9 @@
 import os
 import sys
 import time
+import re
 import requests
+from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 from google import genai
 
@@ -53,13 +55,13 @@ def fetch_new_high_stocks():
     return "\n".join(formatted_data[:35])
 
 def generate_analysis_report(stock_data_text):
-    """Gemini APIで新高値銘柄のスクリーニング分析を実施します（リトライ処理付き）"""
+    """Gemini APIで新高値銘柄のスクリーニング分析を実施します"""
     client = genai.Client()
     
     system_prompt = """
 あなたは「新高値ブレイク投資法」の専門家です。
 提供されたYahoo!ファイナンスの年初来高値更新銘柄リストから、業績背景・出来高・上昇モメンタムを考慮し、
-「本物の新高値銘柄」をスクリーニングして簡潔なLINE用レポートを作成してください。
+「本物の新高値銘柄」をスクリーニングして簡潔なレポートを作成してください。
 
 【出力フォーマット】
 📊 本日の新高値精鋭レポート
@@ -76,7 +78,7 @@ def generate_analysis_report(stock_data_text):
 💡 本日の総括・相場感
 ・市場傾向と観察のワンポイントアドバイス
 
-※LINEメッセージとして読みやすいよう、適度に絵文字や改行を活用し、1,500文字程度に収めてください。
+※読みやすいよう適度に絵文字や改行を活用してください。
 """
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
@@ -92,11 +94,103 @@ def generate_analysis_report(stock_data_text):
         except Exception as e:
             print(f"【警告】Gemini APIの試行 ({attempt}/{max_retries}) に失敗しました: {e}")
             if attempt < max_retries:
-                print("10秒後に再試行します...")
                 time.sleep(10)
             else:
                 print("【エラー】規定の再試行回数を超えたため処理を中断します。")
                 sys.exit(1)
+
+def create_dashboard_html(report_text):
+    """Webサイト（GitHub Pages）用のHTMLダッシュボードと過去ログを作成します"""
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst)
+    today_str = now.strftime("%Y-%m-%d")
+    today_display = now.strftime("%Y年%m月%d日")
+    
+    # docsフォルダ作成（GitHub Pagesの公開用ディレクトリ）
+    docs_dir = "docs"
+    reports_dir = os.path.join(docs_dir, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    
+    # 銘柄コード（4桁数字）をYahoo!ファイナンスのチャートリンクに自動変換
+    linked_report = re.sub(
+        r'\b(\d{4})\b',
+        r'<a href="https://finance.yahoo.co.jp/quote/\1.T" target="_blank" class="text-cyan-400 underline font-mono hover:text-cyan-300">\1</a>',
+        report_text
+    )
+    
+    # 日別HTML生成
+    report_html = f"""<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{today_display} - 新高値分析レポート</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-6 flex justify-between items-center border-b border-slate-700 pb-4">
+            <div>
+                <a href="../index.html" class="text-xs text-cyan-400 hover:underline">← ダッシュボードへ戻る</a>
+                <h1 class="text-2xl font-bold mt-1">新高値精鋭レポート</h1>
+                <p class="text-xs text-slate-400">{today_display} 17:30 更新</p>
+            </div>
+        </header>
+        <main class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 whitespace-pre-wrap leading-relaxed text-sm md:text-base">{linked_report}</main>
+    </div>
+</body>
+</html>"""
+
+    # 本日分のHTML保存
+    today_file_path = os.path.join(reports_dir, f"{today_str}.html")
+    with open(today_file_path, "w", encoding="utf-8") as f:
+        f.write(report_html)
+        
+    # 過去ログファイル一覧を取得して降順ソート
+    files = sorted(os.listdir(reports_dir), reverse=True)
+    archive_links = ""
+    for file in files:
+        if file.endswith(".html"):
+            date_part = file.replace(".html", "")
+            archive_links += f'<li><a href="reports/{file}" class="block p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition text-slate-200 font-mono flex justify-between items-center"><span>📅 {date_part} のレポート</span><span class="text-xs text-cyan-400">閲覧 →</span></a></li>\n'
+            
+    # メインダッシュボード（index.html）生成
+    index_html = f"""<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新高値ブレイク分析ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <header class="border-b border-slate-700 pb-4">
+            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">📈 新高値分析ダッシュボード</h1>
+            <p class="text-sm text-slate-400 mt-1">Gemini 3.6 Flash による自動スクリーニングアーカイブ</p>
+        </header>
+        
+        <section class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-cyan-400">🔥 最新レポート ({today_display})</h2>
+                <a href="reports/{today_str}.html" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg transition">全画面で開く</a>
+            </div>
+            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base border-t border-slate-700 pt-4 max-h-[500px] overflow-y-auto">{linked_report}</div>
+        </section>
+        
+        <section class="space-y-4">
+            <h2 class="text-xl font-bold text-slate-300">📂 過去ログ一覧</h2>
+            <ul class="space-y-2">{archive_links}</ul>
+        </section>
+    </div>
+</body>
+</html>"""
+
+    index_file_path = os.path.join(docs_dir, "index.html")
+    with open(index_file_path, "w", encoding="utf-8") as f:
+        f.write(index_html)
+        
+    print("【成功】HTMLダッシュボードと過去ログの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -140,7 +234,10 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. LINEへレポートを配信中...")
+    print("4. HTMLダッシュボード＆過去ログを自動生成中...")
+    create_dashboard_html(report)
+    
+    print("5. LINEへレポートを配信中...")
     send_line_push_message(report)
 
 if __name__ == "__main__":
