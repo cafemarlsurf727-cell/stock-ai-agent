@@ -34,15 +34,28 @@ def fetch_new_high_stocks():
         sys.exit(1)
         
     soup = BeautifulSoup(response.text, "html.parser")
-    table = soup.find("table")
     
+    # 1. ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を高精度作成
+    stock_dict = {}
+    for a in soup.find_all("a", href=True):
+        m = re.search(r'/quote/(\d{4})', a['href'])
+        if m:
+            code = m.group(1)
+            text = a.text.strip()
+            # 4桁コード数字や(株)等の不要記号を除去して綺麗な社名を取得
+            clean_name = re.sub(r'^\d{4}\s*', '', text)
+            clean_name = re.sub(r'\s*\d{4}$', '', clean_name)
+            clean_name = clean_name.replace('(株)', '').replace('（株）', '').strip()
+            if clean_name and len(clean_name) >= 2 and not clean_name.isdigit():
+                stock_dict[code] = clean_name
+
+    table = soup.find("table")
     if not table:
         print("【警告】新高値更新銘柄のテーブル要素が見つかりませんでした。")
-        return "本日新高値更新銘柄のデータ取得に失敗しました。", {}
+        return "本日新高値更新銘柄のデータ取得に失敗しました。", stock_dict
         
     rows = table.find_all("tr")
     formatted_data = []
-    stock_dict = {}
     
     for row in rows:
         cols = [col.text.strip() for col in row.find_all(["th", "td"])]
@@ -50,21 +63,8 @@ def fetch_new_high_stocks():
             clean_cols = [" ".join(c.split()) for c in cols]
             formatted_data.append(" | ".join(clean_cols))
             
-            # コードと銘柄名の対応辞書を自動生成
-            # 通常のテーブル列から 4桁数字(コード) と 社名 を抽出
-            for i, c in enumerate(cols):
-                m = re.search(r'\b(\d{4})\b', c)
-                if m:
-                    code = m.group(1)
-                    # 隣接する列から銘柄名を探す
-                    for j in range(i + 1, min(i + 3, len(cols))):
-                        val = cols[j].strip()
-                        if val and val not in ['東証P', '東証S', '東証G', 'プライム', 'スタンダード', 'グロース', '名証', '札証', '福証']:
-                            stock_dict[code] = val
-                            break
-            
     if len(formatted_data) <= 1:
-        return "本日新高値更新銘柄のデータが見つかりませんでした。", {}
+        return "本日新高値更新銘柄のデータが見つかりませんでした。", stock_dict
         
     return "\n".join(formatted_data[:35]), stock_dict
 
@@ -129,27 +129,37 @@ def create_dashboard_html(report_text, stock_dict):
     reports_dir = os.path.join(docs_dir, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     
-    # 銘柄置換処理：元データの辞書から社名を完全紐付け
-    def replace_stock_code(match):
+    # 銘柄コードと銘柄名をセットで完全置換する関数
+    def replace_stock_match(match):
         code = match.group(1)
+        inline_name = match.group(2) if match.group(2) else ""
+        inline_name = inline_name.strip()
         
-        # 1. Yahoo!元データ辞書から会社名を取得
-        name = stock_dict.get(code, "")
+        # 日付(2026年等)や単位などの数字を誤検出しないためのガード
+        if code in ['2024', '2025', '2026', '2027', '2028', '2029', '2030'] and code not in stock_dict:
+            return match.group(0)
+            
+        if inline_name in ['年', '月', '日', '時', '分', '秒', '回', '件', '人', '円', '%', 'パーセント']:
+            return match.group(0)
+            
+        invalid_words = ['S', 'A', 'B', 'C', '評価', 'ランク', '短評', '最優先注目銘柄', 'その他の注目銘柄', 'アクションプラン', '原動力', 'テクニカル', '出来高評価', '評価ランク']
+        if inline_name in invalid_words:
+            inline_name = ""
+            
+        # 会社名の決定（優先度: stock_dict > 本文抽出名）
+        final_name = stock_dict.get(code, "")
+        if not final_name and inline_name:
+            final_name = inline_name
+        if not final_name:
+            final_name = f"銘柄 {code}"
+            
+        js_safe_name = final_name.replace("'", "\\'").replace('"', '\\"')
         
-        # 2. 辞書になければレポート文脈から検索（フォールバック）
-        if not name:
-            start_pos = match.end()
-            after_text = report_text[start_pos:start_pos+30]
-            m_name = re.search(r'^[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-]+)', after_text)
-            if m_name and m_name.group(1) not in ['S', 'A', 'B', 'C', '評価', 'ランク', '短評']:
-                name = m_name.group(1).strip()
-            else:
-                name = f"銘柄 {code}"
-                
-        return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{name}</span><button onclick="toggleInlineStock('{code}', '{name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
+        return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{final_name}</span><button onclick="toggleInlineStock('{code}', '{js_safe_name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
-    # レポート内の4桁数字（銘柄コード）を置換
-    linked_report = re.sub(r'\b(\d{4})\b(?!\.T)', replace_stock_code, report_text)
+    # 正規表現: 4桁数字(コード) + オプションで直後の銘柄名
+    pattern = r'\b(\d{4})\b(?:[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-（）\(\)]+))?'
+    linked_report = re.sub(pattern, replace_stock_match, report_text)
     
     watchlist_js = """
     <script>
@@ -181,11 +191,20 @@ def create_dashboard_html(report_text, stock_dict):
             const index = watchlist.findIndex(item => item.code === code);
             
             if (index >= 0) {
-                const removed = watchlist.splice(index, 1)[0];
-                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-                updateWatchlistCount();
-                renderWatchlist();
-                alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
+                // すでに登録されている場合、名前が「銘柄 XXXX」のままで正解名が来たら名前を自動更新
+                if (watchlist[index].name.startsWith('銘柄 ') && defaultName && !defaultName.startsWith('銘柄 ')) {
+                    watchlist[index].name = defaultName;
+                    localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+                    updateWatchlistCount();
+                    renderWatchlist();
+                    alert(`⭐ [ ${code} ] の銘柄名を 「${defaultName}」 に更新しました！`);
+                } else {
+                    const removed = watchlist.splice(index, 1)[0];
+                    localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+                    updateWatchlistCount();
+                    renderWatchlist();
+                    alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
+                }
             } else {
                 const name = defaultName || ('銘柄 ' + code);
                 watchlist.push({ code, name });
@@ -255,7 +274,7 @@ def create_dashboard_html(report_text, stock_dict):
                     <div class="flex items-center gap-2 overflow-hidden flex-1">
                         <span class="text-fuchsia-400 font-bold shrink-0">[ ${item.code} ]</span>
                         <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-slate-100 hover:text-cyan-400 font-bold text-sm truncate flex items-center gap-1 hover:underline" title="Yahoo!ファイナンスでチャートを開く">
-                            <span>${item.name || '銘柄名未設定'}</span>
+                            <span>${item.name || ('銘柄 ' + item.code)}</span>
                             <span class="text-xs text-yellow-400 shrink-0">🔗</span>
                         </a>
                     </div>
@@ -437,7 +456,7 @@ def create_dashboard_html(report_text, stock_dict):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】社名完全紐付けダッシュボードの生成が完了しました。")
+    print("【成功】社名完全紐付け＆自動更新機能付きダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -481,7 +500,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. 社名自動紐付けダッシュボード＆過去ログを自動生成中...")
+    print("4. 社名完全紐付けダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report, stock_dict)
     
     print("5. LINEへレポートを配信中...")
