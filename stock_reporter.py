@@ -92,7 +92,6 @@ def fetch_new_high_stocks():
         return "本日新高値更新銘柄のデータが見つかりませんでした。", stock_dict, 0
 
     data_rows = formatted_data[:40]
-    # ヘッダー行を除いた実データ行数（total_scraped の正しい値）
     scraped_count = max(len(data_rows) - 1, 0)
     return "\n".join(data_rows), stock_dict, scraped_count
 
@@ -139,7 +138,6 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
     client = genai.Client()
-    # コストと精度で役割を分ける。Stage2だけ検索を伴う重い処理なので上位モデルにする。
     model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
     model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
     model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
@@ -147,6 +145,7 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
 あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
+銘柄コードは英字混在4桁（例: 130A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
 【データ】
 {stock_data_text}
 """
@@ -156,6 +155,7 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
     stage2_prompt = f"""
 以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
+銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
 本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
 
 【Stage 1 候補データ】
@@ -173,6 +173,7 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
 以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
 リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
+codeフィールドは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、元の表記のまま正確に引用してください。
 
 【リサーチ結果】
 {grounded_research}
@@ -195,7 +196,7 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
                 "items": {
                     "type": "OBJECT",
                     "properties": {
-                        "code": {"type": "STRING"},
+                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁（130A等）の場合は元の表記のまま。"},
                         "name": {"type": "STRING"},
                         "rank": {"type": "STRING", "enum": ["S", "A", "B"]},
                         "breakout_quality": {"type": "STRING"},
@@ -244,10 +245,8 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
         print(f"レスポンス内容: {res3.text}")
         sys.exit(1)
 
-    # モデルの自己申告ではなく実際のスクレイピング件数で上書き（Stage3は元データの件数を知らない）
     parsed_data.setdefault("summary", {})["total_scraped"] = scraped_count
     parsed_data["summary"]["top_picks_count"] = len(parsed_data.get("evaluated_stocks", []))
-    # 参照URLはグラウンディングメタデータから取得した実URLのみを使う（本文からの抽出はしない＝捏造防止）
     parsed_data["source_urls"] = grounding_urls
 
     return parsed_data
@@ -261,6 +260,18 @@ def escape_html(text):
                 .replace(">", "&gt;")
                 .replace('"', "&quot;")
                 .replace("'", "&#39;"))
+
+def normalize_code(raw_code, stock_dict, raw_name=None):
+    """Geminiの自然文処理でコードが欠損・小文字化した場合に、
+    スクレイピング原本(stock_dict)と突き合わせて正しいコードへ復元する"""
+    code = re.sub(r'[^0-9A-Za-z]', '', str(raw_code or '')).upper()
+    if code in stock_dict:
+        return code
+    if raw_name:
+        for c, n in stock_dict.items():
+            if n == raw_name or (n and (n in raw_name or raw_name in n)):
+                return c
+    return code
 
 def build_static_assets():
     """軽量・高速な外部CSSとJSファイルを assets/ に生成します"""
@@ -442,9 +453,12 @@ def create_dashboard_html(data, stock_dict):
 
     cards_html = ""
     for s in stocks:
-        code = escape_html(s.get("code", "").upper())
-        raw_name = stock_dict.get(code, s.get("name", f"銘柄 {code}"))
-        name = escape_html(raw_name)
+        raw_code = s.get("code", "")
+        raw_name_from_json = s.get("name", "")
+        resolved_code = normalize_code(raw_code, stock_dict, raw_name_from_json)
+        code = escape_html(resolved_code)
+        name = escape_html(stock_dict.get(resolved_code, raw_name_from_json or f"銘柄 {resolved_code}"))
+
         rank = s.get("rank", "B")
         rank = rank if rank in ("S", "A", "B") else "B"
         rank_esc = escape_html(rank)
