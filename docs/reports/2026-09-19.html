@@ -17,63 +17,179 @@
 </head>
 <body class="bg-black text-cyan-400 min-h-screen p-4 md:p-8 cyber-tile selection:bg-fuchsia-500 selection:text-black">
     <div class="max-w-4xl mx-auto space-y-6">
-        <header class="border-b-2 border-cyan-500 pb-4 shadow-[0_0_15px_rgba(0,240,255,0.4)] flex justify-between items-end">
+        <header class="border-b-2 border-cyan-500 pb-4 shadow-[0_0_15px_rgba(0,240,255,0.4)] flex justify-between items-end gap-2">
             <div>
-                <a href="../index.html" class="text-xs text-fuchsia-400 hover:text-fuchsia-300 font-bold">≪ RETURN TO SYSTEM DASHBOARD</a>
+                <a href="../index.html" class="text-xs text-fuchsia-400 hover:text-fuchsia-300 font-bold">≪ RETURN TO DASHBOARD</a>
                 <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400 tracking-wider mt-1">
                     ⚡ TARGET ANALYSIS // 2026.09.19
                 </h1>
             </div>
-            <span class="text-xs text-yellow-400 border border-yellow-400 px-2 py-0.5 animate-pulse">LIVE DATA</span>
+            <button onclick="toggleWatchlistModal()" class="text-xs bg-slate-900 border border-fuchsia-500 hover:bg-fuchsia-950 text-fuchsia-400 font-bold px-3 py-1.5 transition flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.3)]">
+                <span>⭐ WATCHLIST</span>
+                <span class="text-yellow-400">[ <span id="watch-count">0</span> ]</span>
+            </button>
         </header>
         <main class="bg-slate-950/90 rounded-none p-6 shadow-[0_0_20px_rgba(217,70,239,0.2)] border border-fuchsia-500/50 whitespace-pre-wrap leading-relaxed text-slate-200 text-sm md:text-base border-l-4 border-l-fuchsia-500">📊 **本日の新高値精鋭レポート**
 
-新高値ブレイク投資法の観点から、本日発表されたリストから「モメンタム」「上値の軽さ（ベースのブレイク）」「業績・材料背景」を備えた本物のブレイク銘柄を厳選・評価しました。
+「新高値ブレイク投資法」の観点から、本日提示されたリストの中で「上値の軽さ」「保ち合い離脱の明確さ」「テーマ・成長性」を兼ね備えた「本物の新高値銘柄」を厳選しました。
 
 ---
 
 🏆 **最優先注目銘柄**
 
-### 1. <a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a> / ほぼ日 / 評価ランク：S
-* **原動力（業績サプライズ・材料）**：
-  主力の「ほぼ日手帳」の国内・海外（特にアジア・北米）での需要拡大と海外販売比率の上昇、ライフスタイル関連商品の好調による業績再成長ストーリーが評価。
-* **テクニカル/出来高評価**：
-  7月高値（4,690円）から約2ヶ月半続いた保ち合い（ベース）を大幅な大陽線で一気に上放れ、5,200円のストップ高水準まで急伸。カップウィズハンドルやフラッグ形状からの典型的な「新高値ブレイクアウト」を達成。
-* **アクションプラン**：
-  上値抵抗線のない「青天井」フェーズに突入。翌営業日の寄付きでの追随買い、またはブレイクライン（4,700円〜4,800円付近）までの押し目（ピボットポイントへのプルバック）を確認してからのエントリーが有効。
+### **<a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a> (株)ほぼ日** / 評価ランク：**S**
+* **原動力（業績サプライズ・材料）**  
+  主力の「ほぼ日手帳」のグローバル展開やIPコンテンツ事業が順調。数ヶ月間の保ち合いを経て、業績・収益性に対する見直し買いが強烈に入っています。
+* **テクニカル/出来高評価**  
+  **本日の最注目株。** 7月7日につけた高値（4,690円）を大幅に一気に上抜けて5,200円のストップ高水準へ到達。約2ヶ月半の保ち合いを大陽線で上放れており、チャート形状は理想的なブレイクアウトを示しています。
+* **アクションプラン**  
+  ブレイク後の初動段階。5,000円台前半での定着を確認しつつ追随買い、または一時的な押し目（4,800円〜5,000円付近）を狙う。4,700円を下回るようであれば撤退（損切り）。
 
 ---
 
-### 2. <a href="https://finance.yahoo.co.jp/quote/3132.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3132 ]</a> / マクニカホールディングス / 評価ランク：A
-* **原動力（業績サプライズ・材料）**：
-  生成AI向け半導体需要やネットワーク・サイバーセキュリティ事業の需要増。プライム市場の中大型株として、機関投資家からの継続的な資金流入が背景。
-* **テクニカル/出来高評価**：
-  心理的節目である4,000円の大台を力強く上抜け、4,118円まで年初来高値を更新。長らく意識されていた上値抵抗帯をクリアし、上昇トレンドの再開を示唆。
-* **アクションプラン**：
-  大台4,000円が今後の強力なサポート（下値支持線）へ転換したかを確認。4,000〜4,050円付近での押し目買いを基本戦略とし、直近高値4,118円突破で買い増しを検討。
+### **<a href="https://finance.yahoo.co.jp/quote/3132.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3132 ]</a> マクニカホールディングス(株)** / 評価ランク：**A**
+* **原動力（業績サプライズ・材料）**  
+  半導体商社トップクラス。AI関連・サイバーセキュリティ需要の底固さを背景に、プライム市場の大物本命株として見直し買いが継続。
+* **テクニカル/出来高評価**  
+  心理的節目である「4,000円」の大台をしっかりと上抜けて年初来高値を更新。上値抵抗線が限定的となっており、中長期上昇トレンドの継続が極めて濃厚な形です。
+* **アクションプラン**  
+  4,000円～4,050円の節目ラインをサポートにした押し目買い戦略。中長期トレンドに沿った素直な上値追いが有効。
 
 ---
 
 🔍 **その他の注目銘柄**
 
-* **<a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4436 ]</a> ミンカブ・ジ・インフォノイド (評価: A)**  
-  5月高値（564円）を約4ヶ月ぶりに上抜き600円の大台へ。長期底打ちからの本格トレンド転換を示すブレイクで、上昇余地が大きい。
-* **479A PRONI (評価: A)**  
-  直近IPO銘柄で連日の高値更新（2,258円）。ビジネスマッチング市場の急成長を追い風にシコリのない高値圏を力強く推移。
-* **<a href="https://finance.yahoo.co.jp/quote/4417.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4417 ]</a> グローバルセキュリティエキスパート (評価: A)**  
-  高値5,930円まで買われ、6,000円の大台にリーチ。国策・企業防衛テーマであるサイバーセキュリティの好業績裏付けがある本命株。
-* **219A Heartseed (評価: B+)**  
-  8月高値（2,646円）を更新。iPS細胞由来心筋移植など独自パイプラインの材料性を背景に、グロース市場の中で良好なモメンタムを維持。
+* **<a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4436 ]</a> (株)ミンカブ・ジ・インフォノイド (評価: A)**  
+  👉 5月21日の高値（564円）を約4ヶ月ぶりに上抜けて600円到達。長らく続いた底練りからの「トレンド転換・初期ブレイク」のシグナル。
+* **<a href="https://finance.yahoo.co.jp/quote/4417.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4417 ]</a> グローバルセキュリティエキスパート(株) (評価: A)**  
+  👉 セキュリティ国策テーマに乗る好業績グロース。高値5,930円まで買い進まれ、6,000円の大台突破を狙う強いモメンタム。
+* **479A ＰＲＯＮＩ(株) (評価: A)**  
+  👉 前日高値から一段高（2,258円へ）。直近IPO銘柄特有の「しこりがない状態（青天井）」での上値追い加速が魅力的。
+* **219A Ｈｅａｒｔｓｅｅｄ(株) (評価: B+)**  
+  👉 8月高値（2,646円）を抜けて高値更新。バイオ株の中で明確なモメンタムを維持している数少ない銘柄。
 
 ---
 
 💡 **本日の総括・相場感**
 
 * **市場傾向**  
-  本日は大型株からグロース・中小型株まで幅広く新高値銘柄が散見されますが、特に**「数ヶ月ベースの揉み合いを上放れた銘柄（ほぼ日、ミンカブ等）」**に強力な買いエネルギーが集中しています。連日で数円だけ高値を更新している銘柄よりも、長い保ち合いをクリアした銘柄の方がブレイク後の持続力が高くなります。
-
+  本日の新高値リストでは、単なる連日高値更新銘柄（順張り継続型）に加え、**「数ヶ月ぶりの高値突破（保ち合い離脱型）」**を見せた銘柄（ほぼ日、ミンカブ等）の躍進が目立ちます。特に内需・IT・新興グロースに資金が集まりやすい地合いです。
 * **観察のワンポイントアドバイス**  
-  新高値買いで最も重要なのは**「高値更新の質」**です。前日高値をわずかに更新して陰線を引くような「偽のブレイク（ダマシ）」を避け、保ち合い期間が長く、出来高を伴って強い陽線で節目を上抜けた「本物のブレイク銘柄」に資金を集中させましょう。勝率を高めるため、ブレイク直後の過熱感がある寄付き直後ではなく、最初の押し目形成（15分足レベルでのサポート確認）を待つ姿勢も効果的です。</main>
+  新高値ブレイク投資において最も重要なのは**「過去の抵抗帯（しこり）をクリアしたか」**です。本日の「ほぼ日(<a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a>)」のように、数ヶ月前の高値を明確な陽線で突き抜けた銘柄は、上値に売り圧力がなく勢いがつきやすい傾向にあります。寄り付きのダマシに警戒しつつ、ブレイクした旧高値ラインがサポレジ転換（サポートとして機能するか）を確認してエントリーしていきましょう！</main>
     </div>
+    
+    <!-- WATCHLIST MODAL -->
+    <div id="watchlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden justify-center items-center p-4">
+        <div class="bg-slate-950 border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)] w-full max-w-md p-6 space-y-4 font-mono">
+            <div class="flex justify-between items-center border-b border-fuchsia-500/40 pb-3">
+                <h3 class="text-lg font-bold text-fuchsia-400 flex items-center gap-2">
+                    <span>⭐ TARGET WATCHLIST</span>
+                </h3>
+                <button onclick="toggleWatchlistModal()" class="text-slate-400 hover:text-fuchsia-400 text-xl font-bold">✕</button>
+            </div>
+
+            <!-- ADD FORM -->
+            <div class="space-y-2 bg-slate-900/80 p-3 border border-slate-800">
+                <p class="text-xs text-cyan-400">ADD NEW WATCH TARGET:</p>
+                <div class="flex gap-2">
+                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-24 focus:outline-none focus:border-cyan-400">
+                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
+                    <button onclick="addStockToWatchlist()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold text-xs px-3 py-2 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
+                        + ADD
+                    </button>
+                </div>
+            </div>
+
+            <!-- WATCHLIST ITEMS -->
+            <ul id="watchlist-items" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+
+            <div class="pt-2 text-right">
+                <button onclick="toggleWatchlistModal()" class="text-xs text-slate-400 hover:text-slate-200 border border-slate-700 px-3 py-1">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <script>
+        let watchlist = JSON.parse(localStorage.getItem('cyber_stock_watchlist') || '[]');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateWatchlistCount();
+        });
+
+        function updateWatchlistCount() {
+            const el = document.getElementById('watch-count');
+            if (el) el.textContent = watchlist.length;
+        }
+
+        function toggleWatchlistModal() {
+            const modal = document.getElementById('watchlist-modal');
+            if (modal.classList.contains('hidden')) {
+                renderWatchlist();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function addStockToWatchlist() {
+            const codeInput = document.getElementById('input-code');
+            const nameInput = document.getElementById('input-name');
+            const code = codeInput.value.trim();
+            const name = nameInput.value.trim() || ('銘柄 ' + code);
+
+            if (!code || !/^\d{4}$/.test(code)) {
+                alert('4桁の銘柄コードを入力してください（例: 7203）');
+                return;
+            }
+
+            if (watchlist.some(item => item.code === code)) {
+                alert('すでに監視リストに登録されています');
+                return;
+            }
+
+            watchlist.push({ code, name });
+            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+            
+            codeInput.value = '';
+            nameInput.value = '';
+            
+            updateWatchlistCount();
+            renderWatchlist();
+        }
+
+        function removeStockFromWatchlist(code) {
+            watchlist = watchlist.filter(item => item.code !== code);
+            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
+            updateWatchlistCount();
+            renderWatchlist();
+        }
+
+        function renderWatchlist() {
+            const listEl = document.getElementById('watchlist-items');
+            if (!listEl) return;
+
+            if (watchlist.length === 0) {
+                listEl.innerHTML = '<li class="text-slate-500 text-xs py-4 text-center font-mono">NO WATCHLIST TARGETS REGISTERED</li>';
+                return;
+            }
+
+            listEl.innerHTML = watchlist.map(item => `
+                <li class="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition font-mono">
+                    <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-cyan-400 hover:text-fuchsia-400 font-bold flex items-center gap-2">
+                        <span class="text-fuchsia-400">[ ${item.code} ]</span>
+                        <span class="text-slate-200 text-sm hover:underline">${item.name}</span>
+                        <span class="text-xs text-yellow-400">🔗</span>
+                    </a>
+                    <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-0.5 hover:bg-red-950 transition">
+                        DEL
+                    </button>
+                </li>
+            `).join('');
+        }
+    </script>
+    
 </body>
 </html>
