@@ -35,16 +35,15 @@ def fetch_new_high_stocks():
         
     soup = BeautifulSoup(response.text, "html.parser")
     
-    # 1. ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を高精度作成
+    # 1. ページ内の/quote/XXXX.Tリンクから『コード -> 公式社名』の辞書を作成（英字混在コード 130A 等に対応）
     stock_dict = {}
     for a in soup.find_all("a", href=True):
-        m = re.search(r'/quote/(\d{4})', a['href'])
+        m = re.search(r'/quote/([0-9A-Za-z]{4})\.T', a['href'], re.IGNORECASE)
         if m:
-            code = m.group(1)
+            code = m.group(1).upper()
             text = a.text.strip()
-            # 4桁コード数字や(株)等の不要記号を除去して綺麗な社名を取得
-            clean_name = re.sub(r'^\d{4}\s*', '', text)
-            clean_name = re.sub(r'\s*\d{4}$', '', clean_name)
+            clean_name = re.sub(r'^[0-9A-Za-z]{4}\s*', '', text)
+            clean_name = re.sub(r'\s*[0-9A-Za-z]{4}$', '', clean_name)
             clean_name = clean_name.replace('(株)', '').replace('（株）', '').strip()
             if clean_name and len(clean_name) >= 2 and not clean_name.isdigit():
                 stock_dict[code] = clean_name
@@ -92,7 +91,7 @@ def generate_analysis_report(stock_data_text):
 💡 本日の総括・相場感
 ・市場傾向と観察のワンポイントアドバイス
 
-※各銘柄の表記は「4桁コード 銘柄名」の形式（例: 7203 トヨタ自動車）を徹底し、読みやすいよう適度に絵文字や改行を活用してください。
+※各銘柄の表記は「4桁コード 銘柄名」の形式（例: 7203 トヨタ自動車、130A VERITAS）を徹底し、英字混在コードの場合も省略せず正確に記載してください。読みやすいよう適度に絵文字や改行を活用してください。
 """
 
     prompt = f"【本日の新高値更新銘柄データ】\n{stock_data_text}"
@@ -131,11 +130,11 @@ def create_dashboard_html(report_text, stock_dict):
     
     # 銘柄コードと銘柄名をセットで完全置換する関数
     def replace_stock_match(match):
-        code = match.group(1)
+        code = match.group(1).upper()
         inline_name = match.group(2) if match.group(2) else ""
         inline_name = inline_name.strip()
         
-        # 日付(2026年等)や単位などの数字を誤検出しないためのガード
+        # 日付(2026年等)や数字の誤検出防止
         if code in ['2024', '2025', '2026', '2027', '2028', '2029', '2030'] and code not in stock_dict:
             return match.group(0)
             
@@ -157,8 +156,8 @@ def create_dashboard_html(report_text, stock_dict):
         
         return f"""<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ {code} ]</a><span class="text-slate-100 font-bold">{final_name}</span><button onclick="toggleInlineStock('{code}', '{js_safe_name}', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span>"""
 
-    # 正規表現: 4桁数字(コード) + オプションで直後の銘柄名
-    pattern = r'\b(\d{4})\b(?:[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-（）\(\)]+))?'
+    # 正規表現: 数字で始まる英数字4桁（7203, 130A, 255A 等に対応）
+    pattern = r'\b(\d[0-9A-Za-z]{3})\b(?:[\s/|:：・\-\)\］\】]*([一-龠ぁ-んァ-ヶA-Za-z0-9＆&ー─＋+\-（）\(\)]+))?'
     linked_report = re.sub(pattern, replace_stock_match, report_text)
     
     watchlist_js = """
@@ -188,10 +187,10 @@ def create_dashboard_html(report_text, stock_dict):
 
         function toggleInlineStock(code, defaultName, ev) {
             if (ev) ev.preventDefault();
+            code = code.toUpperCase();
             const index = watchlist.findIndex(item => item.code === code);
             
             if (index >= 0) {
-                // すでに登録されている場合、名前が「銘柄 XXXX」のままで正解名が来たら名前を自動更新
                 if (watchlist[index].name.startsWith('銘柄 ') && defaultName && !defaultName.startsWith('銘柄 ')) {
                     watchlist[index].name = defaultName;
                     localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
@@ -218,11 +217,11 @@ def create_dashboard_html(report_text, stock_dict):
         function addStockToWatchlist() {
             const codeInput = document.getElementById('input-code');
             const nameInput = document.getElementById('input-name');
-            const code = codeInput.value.trim();
+            const code = codeInput.value.trim().toUpperCase();
             const name = nameInput.value.trim() || ('銘柄 ' + code);
 
-            if (!code || !/^\d{4}$/.test(code)) {
-                alert('4桁の銘柄コードを入力してください（例: 7203）');
+            if (!code || !/^\d[0-9A-Z]{3}$/i.test(code)) {
+                alert('4桁の銘柄コードを入力してください（例: 7203, 130A）');
                 return;
             }
 
@@ -242,6 +241,7 @@ def create_dashboard_html(report_text, stock_dict):
         }
 
         function editStockName(code) {
+            code = code.toUpperCase();
             const item = watchlist.find(i => i.code === code);
             if (!item) return;
             
@@ -254,6 +254,7 @@ def create_dashboard_html(report_text, stock_dict):
         }
 
         function removeStockFromWatchlist(code) {
+            code = code.toUpperCase();
             watchlist = watchlist.filter(item => item.code !== code);
             localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
             updateWatchlistCount();
@@ -307,8 +308,8 @@ def create_dashboard_html(report_text, stock_dict):
             <div class="space-y-2 bg-slate-900/80 p-3 border border-slate-800">
                 <p class="text-xs text-cyan-400">手動で監視対象を追加:</p>
                 <div class="flex gap-2">
-                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-28 focus:outline-none focus:border-cyan-400">
-                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ自動車)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
+                    <input id="input-code" type="text" placeholder="コード (7203, 130A)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-32 focus:outline-none focus:border-cyan-400">
+                    <input id="input-name" type="text" placeholder="銘柄名" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
                     <button onclick="addStockToWatchlist()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold text-xs px-3 py-2 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
                         + ADD
                     </button>
@@ -456,7 +457,7 @@ def create_dashboard_html(report_text, stock_dict):
     with open(index_file_path, "w", encoding="utf-8") as f:
         f.write(index_html)
         
-    print("【成功】社名完全紐付け＆自動更新機能付きダッシュボードの生成が完了しました。")
+    print("【成功】英字入り銘柄コード（130A等）完全対応版ダッシュボードの生成が完了しました。")
 
 def send_line_push_message(report_text):
     """LINE Messaging API経由で個人アカウントへプッシュ通知を送信します"""
@@ -500,7 +501,7 @@ def main():
     print("3. Gemini APIでスクリーニング分析中...")
     report = generate_analysis_report(stock_data)
     
-    print("4. 社名完全紐付けダッシュボード＆過去ログを自動生成中...")
+    print("4. 英字入り銘柄コード完全対応ダッシュボード＆過去ログを自動生成中...")
     create_dashboard_html(report, stock_dict)
     
     print("5. LINEへレポートを配信中...")
