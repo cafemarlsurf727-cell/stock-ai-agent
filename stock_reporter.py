@@ -675,4 +675,156 @@ def create_dashboard_html(data, stock_dict):
 </html>"""
 
     today_file_path = os.path.join(reports_dir, f"{today_str}.html")
-    with open(today_file_path,
+    with open(today_file_path, "w", encoding="utf-8") as f:
+        f.write(report_html)
+
+    data_dir = os.path.join(docs_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    with open(os.path.join(data_dir, f"{today_str}.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    files = sorted([f for f in os.listdir(reports_dir) if f.endswith(".html")], reverse=True)
+    archive_links = ""
+    for file in files:
+        date_part = file.replace(".html", "")
+        archive_links += f'''<li>
+        <a href="reports/{file}" class="archive-item">
+            <span>▶ ARCHIVE // {date_part}</span>
+            <span>ACCESS →</span>
+        </a>
+        </li>\n'''
+
+    index_html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
+                <h1>⚡ NEW-HIGH TERMINAL</h1>
+            </div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
+        </header>
+
+        <div class="overview-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong>🔥 最新レポート ({today_display})</strong>
+                <a href="reports/{today_str}.html" class="btn">FULL REPORT ↗</a>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果とAI裏取りデータは「FULL REPORT」から確認できます。</p>
+        </div>
+
+        <section>
+            <h2 style="font-size:1rem; color:var(--fuchsia); margin-bottom:0.8rem;">📂 SYSTEM ARCHIVES</h2>
+            <ul class="archive-list">{archive_links}</ul>
+        </section>
+    </div>
+    {WATCHLIST_MODAL_HTML}
+    <div id="toast"></div>
+    <script src="assets/app.js"></script>
+</body>
+</html>"""
+
+    with open(os.path.join(docs_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(index_html)
+
+    with open(os.path.join(docs_dir, ".nojekyll"), "w", encoding="utf-8") as f:
+        f.write("")
+
+    print("【成功】軽量CSS/JS及びダッシュボードの生成が完了しました。")
+    return build_line_messages(data, today_display)
+
+def send_line_push_messages(messages):
+    """LINE Messaging API経由でプッシュ通知を送信します"""
+    line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
+    line_user_id = os.environ.get("LINE_USER_ID", "").strip()
+
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {line_access_token}"
+    }
+
+    payload = {
+        "to": line_user_id,
+        "messages": [{"type": "text", "text": m} for m in messages]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=15)
+        if res.status_code == 200:
+            print(f"【成功】LINEへのレポート送信が正常に完了しました（{len(messages)}通）。")
+        else:
+            print(f"【エラー】LINE送信エラー (Status {res.status_code}): {res.text}")
+            sys.exit(1)
+    except Exception as e:
+        print(f"【エラー】LINE通信処理中に例外が発生しました: {e}")
+        sys.exit(1)
+
+def write_job_summary(data):
+    """GitHub Actions のジョブサマリーに出力します"""
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    stocks = data.get("evaluated_stocks", [])
+
+    lines = "\n".join(
+        f"| {s.get('rank')} | {s.get('code')} | {s.get('name')} | {s.get('confidence')} | {s.get('action_plan')} |"
+        for s in stocks
+    )
+    table = (
+        "### 📊 新高値スクリーニング結果\n\n"
+        f"対象 {data.get('summary', {}).get('total_scraped', 0)} 銘柄 / 抽出 {len(stocks)} 銘柄\n\n"
+        "| 評価 | コード | 銘柄名 | 信頼度 | アクション |\n|---|---|---|---|---|\n" + lines
+    )
+
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as f:
+            f.write(table + "\n")
+    else:
+        print(table)
+
+def main():
+    parser = argparse.ArgumentParser(description="新高値ブレイク 自動スクリーニングAPI")
+    parser.add_argument("--dry-run", action="store_true", help="LINEに送信せず、HTML生成とスクリーニングテストのみ行います")
+    parser.add_argument("--force", action="store_true", help="営業日判定を無視して強制実行します")
+    args = parser.parse_args()
+
+    print("1. 環境変数のチェック中...")
+    check_env_vars(require_line=not args.dry_run)
+
+    jst = timezone(timedelta(hours=9))
+    today_now = datetime.now(jst)
+
+    if not args.force and is_market_holiday(today_now):
+        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
+        sys.exit(0)
+
+    print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
+    build_static_assets()
+
+    print("3. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
+    stock_data, stock_dict, scraped_count = fetch_new_high_stocks()
+
+    print("4. マルチステージ Gemini API スクリーニング＆裏取り分析を実行中...")
+    json_data = analyze_stocks_multi_stage(stock_data, scraped_count)
+
+    print("5. 高速ダッシュボードHTML・JSONアーカイブを生成中...")
+    line_messages = create_dashboard_html(json_data, stock_dict)
+
+    write_job_summary(json_data)
+
+    if args.dry_run:
+        print("【ドライラン】--dry-run が指定されたため、LINEへの配信をスキップして終了します。")
+        sys.exit(0)
+
+    print("6. LINEへレポートを配信中...")
+    send_line_push_messages(line_messages)
+
+if __name__ == "__main__":
+    main()
