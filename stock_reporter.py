@@ -136,9 +136,9 @@ def _is_quota_exhausted(e):
     msg = str(e)
     return "RESOURCE_EXHAUSTED" in msg and ("quota" in msg.lower() or "billing" in msg.lower())
 
-def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=6):
+def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=3):
     """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。
-    429/503（レート制限・過負荷）は特に長めの指数バックオフで粘るが、
+    無料枠ではリトライ自体が新たなリクエストとして日次上限を消費するため、回数は控えめにする。
     クォータそのものの枯渇（課金・プラン起因）は待っても無意味なので即座に失敗させる。"""
     for attempt in range(1, max_retries + 1):
         try:
@@ -158,7 +158,7 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
                 print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
                 raise
             if code in (429, 503):
-                delay = min(180, 20 * (2 ** (attempt - 1))) + random.uniform(0, 5)
+                delay = min(90, 15 * (2 ** (attempt - 1))) + random.uniform(0, 5)
             else:
                 delay = attempt * 10
             print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）。{delay:.0f}秒待機して再試行します。")
@@ -172,40 +172,33 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
             time.sleep(delay)
 
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
-    """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
+    """Stage 1（検索なしトリアージ）を廃止し、選定基準をStage 2に統合。
+    無料プランのGemini API利用枠に収めるため、1回の実行での呼び出し回数を
+    3回（トリアージ／裏取り／構造化）から2回（裏取り／構造化）に削減している。
+    モデルも無料枠が広く確立された gemini-2.5-flash をデフォルトにする。"""
     client = genai.Client()
-    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
+    model_research = os.environ.get("MODEL_RESEARCH", "gemini-2.5-flash")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-2.5-flash")
 
-    print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
+    print("--> [Stage 1] Google検索グラウンディングで候補選定＋決算・材料の裏取りを一括実行中...")
     stage1_prompt = f"""
 あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
 銘柄コードは英字混在4桁（例: 130A, 219A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
-【データ】
+
+選定した各銘柄について、Google検索ツールを使って直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）も同時に行ってください。事実が確認できなかった項目は「未確認」と明示してください。
+
+【新高値更新銘柄データ】
 {stock_data_text}
-"""
-    res1 = call_gemini_with_retry(client, model_triage, [stage1_prompt])
-    stage1_candidates = res1.text
-
-    print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
-    stage2_prompt = f"""
-以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
-銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
-本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
-
-【Stage 1 候補データ】
-{stage1_candidates}
 """
     config_search = types.GenerateContentConfig(
         tools=[types.Tool(google_search=types.GoogleSearch())]
     )
-    res2 = call_gemini_with_retry(client, model_research, [stage2_prompt], config=config_search)
-    grounded_research = res2.text
-    grounding_urls = extract_grounding_urls(res2)
+    res1 = call_gemini_with_retry(client, model_research, [stage1_prompt], config=config_search)
+    grounded_research = res1.text
+    grounding_urls = extract_grounding_urls(res1)
 
-    print("--> [Stage 3] response_schemaを用いて厳密なJSON構造データに変換中...")
-    stage3_prompt = f"""
+    print("--> [Stage 2] response_schemaを用いて厳密なJSON構造データに変換中...")
+    stage2_prompt = f"""
 以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
 リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
@@ -273,13 +266,13 @@ nameフィールドは会社名を1回だけ記載してください（同じ会
         response_schema=json_schema
     )
 
-    res3 = call_gemini_with_retry(client, model_structure, [stage3_prompt], config=config_json)
+    res2 = call_gemini_with_retry(client, model_structure, [stage2_prompt], config=config_json)
 
     try:
-        parsed_data = json.loads(res3.text)
+        parsed_data = json.loads(res2.text)
     except Exception as e:
         print(f"【エラー】JSONのパースに失敗しました: {e}")
-        print(f"レスポンス内容: {res3.text}")
+        print(f"レスポンス内容: {res2.text}")
         sys.exit(1)
 
     parsed_data.setdefault("summary", {})["total_scraped"] = scraped_count
@@ -682,156 +675,4 @@ def create_dashboard_html(data, stock_dict):
 </html>"""
 
     today_file_path = os.path.join(reports_dir, f"{today_str}.html")
-    with open(today_file_path, "w", encoding="utf-8") as f:
-        f.write(report_html)
-
-    data_dir = os.path.join(docs_dir, "data")
-    os.makedirs(data_dir, exist_ok=True)
-    with open(os.path.join(data_dir, f"{today_str}.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    files = sorted([f for f in os.listdir(reports_dir) if f.endswith(".html")], reverse=True)
-    archive_links = ""
-    for file in files:
-        date_part = file.replace(".html", "")
-        archive_links += f'''<li>
-        <a href="reports/{file}" class="archive-item">
-            <span>▶ ARCHIVE // {date_part}</span>
-            <span>ACCESS →</span>
-        </a>
-        </li>\n'''
-
-    index_html = f"""<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex">
-    <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
-    <link rel="stylesheet" href="assets/style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <div>
-                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
-                <h1>⚡ NEW-HIGH TERMINAL</h1>
-            </div>
-            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
-        </header>
-
-        <div class="overview-box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                <strong>🔥 最新レポート ({today_display})</strong>
-                <a href="reports/{today_str}.html" class="btn">FULL REPORT ↗</a>
-            </div>
-            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果とAI裏取りデータは「FULL REPORT」から確認できます。</p>
-        </div>
-
-        <section>
-            <h2 style="font-size:1rem; color:var(--fuchsia); margin-bottom:0.8rem;">📂 SYSTEM ARCHIVES</h2>
-            <ul class="archive-list">{archive_links}</ul>
-        </section>
-    </div>
-    {WATCHLIST_MODAL_HTML}
-    <div id="toast"></div>
-    <script src="assets/app.js"></script>
-</body>
-</html>"""
-
-    with open(os.path.join(docs_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(index_html)
-
-    with open(os.path.join(docs_dir, ".nojekyll"), "w", encoding="utf-8") as f:
-        f.write("")
-
-    print("【成功】軽量CSS/JS及びダッシュボードの生成が完了しました。")
-    return build_line_messages(data, today_display)
-
-def send_line_push_messages(messages):
-    """LINE Messaging API経由でプッシュ通知を送信します"""
-    line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
-    line_user_id = os.environ.get("LINE_USER_ID", "").strip()
-
-    url = "https://api.line.me/v2/bot/message/push"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {line_access_token}"
-    }
-
-    payload = {
-        "to": line_user_id,
-        "messages": [{"type": "text", "text": m} for m in messages]
-    }
-
-    try:
-        res = requests.post(url, headers=headers, json=payload, timeout=15)
-        if res.status_code == 200:
-            print(f"【成功】LINEへのレポート送信が正常に完了しました（{len(messages)}通）。")
-        else:
-            print(f"【エラー】LINE送信エラー (Status {res.status_code}): {res.text}")
-            sys.exit(1)
-    except Exception as e:
-        print(f"【エラー】LINE通信処理中に例外が発生しました: {e}")
-        sys.exit(1)
-
-def write_job_summary(data):
-    """GitHub Actions のジョブサマリーに出力します"""
-    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-    stocks = data.get("evaluated_stocks", [])
-
-    lines = "\n".join(
-        f"| {s.get('rank')} | {s.get('code')} | {s.get('name')} | {s.get('confidence')} | {s.get('action_plan')} |"
-        for s in stocks
-    )
-    table = (
-        "### 📊 新高値スクリーニング結果\n\n"
-        f"対象 {data.get('summary', {}).get('total_scraped', 0)} 銘柄 / 抽出 {len(stocks)} 銘柄\n\n"
-        "| 評価 | コード | 銘柄名 | 信頼度 | アクション |\n|---|---|---|---|---|\n" + lines
-    )
-
-    if summary_path:
-        with open(summary_path, "a", encoding="utf-8") as f:
-            f.write(table + "\n")
-    else:
-        print(table)
-
-def main():
-    parser = argparse.ArgumentParser(description="新高値ブレイク 自動スクリーニングAPI")
-    parser.add_argument("--dry-run", action="store_true", help="LINEに送信せず、HTML生成とスクリーニングテストのみ行います")
-    parser.add_argument("--force", action="store_true", help="営業日判定を無視して強制実行します")
-    args = parser.parse_args()
-
-    print("1. 環境変数のチェック中...")
-    check_env_vars(require_line=not args.dry_run)
-
-    jst = timezone(timedelta(hours=9))
-    today_now = datetime.now(jst)
-
-    if not args.force and is_market_holiday(today_now):
-        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
-        sys.exit(0)
-
-    print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
-    build_static_assets()
-
-    print("3. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
-    stock_data, stock_dict, scraped_count = fetch_new_high_stocks()
-
-    print("4. マルチステージ Gemini API スクリーニング＆裏取り分析を実行中...")
-    json_data = analyze_stocks_multi_stage(stock_data, scraped_count)
-
-    print("5. 高速ダッシュボードHTML・JSONアーカイブを生成中...")
-    line_messages = create_dashboard_html(json_data, stock_dict)
-
-    write_job_summary(json_data)
-
-    if args.dry_run:
-        print("【ドライラン】--dry-run が指定されたため、LINEへの配信をスキップして終了します。")
-        sys.exit(0)
-
-    print("6. LINEへレポートを配信中...")
-    send_line_push_messages(line_messages)
-
-if __name__ == "__main__":
-    main()
+    with open(today_file_path,
