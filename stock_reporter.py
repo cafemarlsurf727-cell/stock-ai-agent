@@ -136,9 +136,9 @@ def _is_quota_exhausted(e):
     msg = str(e)
     return "RESOURCE_EXHAUSTED" in msg and ("quota" in msg.lower() or "billing" in msg.lower())
 
-def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=3):
+def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=6):
     """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。
-    無料枠ではリトライ自体が新たなリクエストとして日次上限を消費するため、回数は控えめにする。
+    429/503（レート制限・過負荷）は特に長めの指数バックオフで粘るが、
     クォータそのものの枯渇（課金・プラン起因）は待っても無意味なので即座に失敗させる。"""
     for attempt in range(1, max_retries + 1):
         try:
@@ -158,7 +158,7 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
                 print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
                 raise
             if code in (429, 503):
-                delay = min(90, 15 * (2 ** (attempt - 1))) + random.uniform(0, 5)
+                delay = min(180, 20 * (2 ** (attempt - 1))) + random.uniform(0, 5)
             else:
                 delay = attempt * 10
             print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）。{delay:.0f}秒待機して再試行します。")
@@ -172,33 +172,40 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
             time.sleep(delay)
 
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
-    """Stage 1（検索なしトリアージ）を廃止し、選定基準をStage 2に統合。
-    無料プランのGemini API利用枠に収めるため、1回の実行での呼び出し回数を
-    3回（トリアージ／裏取り／構造化）から2回（裏取り／構造化）に削減している。
-    モデルも無料枠が広く確立された gemini-2.5-flash をデフォルトにする。"""
+    """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
     client = genai.Client()
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-2.5-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-2.5-flash")
+    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
+    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
 
-    print("--> [Stage 1] Google検索グラウンディングで候補選定＋決算・材料の裏取りを一括実行中...")
+    print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
 あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
 銘柄コードは英字混在4桁（例: 130A, 219A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
-
-選定した各銘柄について、Google検索ツールを使って直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）も同時に行ってください。事実が確認できなかった項目は「未確認」と明示してください。
-
-【新高値更新銘柄データ】
+【データ】
 {stock_data_text}
+"""
+    res1 = call_gemini_with_retry(client, model_triage, [stage1_prompt])
+    stage1_candidates = res1.text
+
+    print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
+    stage2_prompt = f"""
+以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
+銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
+本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
+
+【Stage 1 候補データ】
+{stage1_candidates}
 """
     config_search = types.GenerateContentConfig(
         tools=[types.Tool(google_search=types.GoogleSearch())]
     )
-    res1 = call_gemini_with_retry(client, model_research, [stage1_prompt], config=config_search)
-    grounded_research = res1.text
-    grounding_urls = extract_grounding_urls(res1)
+    res2 = call_gemini_with_retry(client, model_research, [stage2_prompt], config=config_search)
+    grounded_research = res2.text
+    grounding_urls = extract_grounding_urls(res2)
 
-    print("--> [Stage 2] response_schemaを用いて厳密なJSON構造データに変換中...")
-    stage2_prompt = f"""
+    print("--> [Stage 3] response_schemaを用いて厳密なJSON構造データに変換中...")
+    stage3_prompt = f"""
 以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
 リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
@@ -266,13 +273,13 @@ nameフィールドは会社名を1回だけ記載してください（同じ会
         response_schema=json_schema
     )
 
-    res2 = call_gemini_with_retry(client, model_structure, [stage2_prompt], config=config_json)
+    res3 = call_gemini_with_retry(client, model_structure, [stage3_prompt], config=config_json)
 
     try:
-        parsed_data = json.loads(res2.text)
+        parsed_data = json.loads(res3.text)
     except Exception as e:
         print(f"【エラー】JSONのパースに失敗しました: {e}")
-        print(f"レスポンス内容: {res2.text}")
+        print(f"レスポンス内容: {res3.text}")
         sys.exit(1)
 
     parsed_data.setdefault("summary", {})["total_scraped"] = scraped_count
