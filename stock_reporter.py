@@ -130,9 +130,16 @@ def extract_grounding_urls(response):
         pass
     return urls
 
+def _is_quota_exhausted(e):
+    """時間経過では回復しない、利用枠(クォータ)そのものの枯渇かどうかを判定する。
+    通常の一時的なレート制限（分単位）とは異なり、課金設定や日次上限の変更が必要なケース。"""
+    msg = str(e)
+    return "RESOURCE_EXHAUSTED" in msg and ("quota" in msg.lower() or "billing" in msg.lower())
+
 def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=6):
     """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。
-    429/503（レート制限・過負荷）は特に長めの指数バックオフで粘る。"""
+    429/503（レート制限・過負荷）は特に長めの指数バックオフで粘るが、
+    クォータそのものの枯渇（課金・プラン起因）は待っても無意味なので即座に失敗させる。"""
     for attempt in range(1, max_retries + 1):
         try:
             if config:
@@ -140,6 +147,12 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
             return client.models.generate_content(model=model, contents=contents_list)
         except genai_errors.APIError as e:
             code = getattr(e, "code", None)
+
+            if code == 429 and _is_quota_exhausted(e):
+                print("【エラー】Gemini APIの利用枠（クォータ）を使い切っています。時間経過を待つリトライは意味がないため、ここで処理を中断します。")
+                print("　→ https://ai.dev/rate-limit で使用状況を確認し、無料枠の上限か課金設定の要否を確認してください。")
+                raise
+
             retryable = code in (429, 500, 503, 504)
             if not retryable or attempt == max_retries:
                 print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
