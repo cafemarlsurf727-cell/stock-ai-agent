@@ -1,0 +1,178 @@
+{
+  "summary": {
+    "total_scraped": 39,
+    "top_picks_count": 8,
+    "market_trend_comment": "新高値ブレイク投資法に基づき、長期保ち合い上放れや心理的節目突破を見せた有望8銘柄を選定。半導体、DX/IT、セキュリティ、消費成長株など強いテーマ性と業績モメンタムを備えた銘柄を中心に強力な上昇勢いが確認できます。"
+  },
+  "evaluated_stocks": [
+    {
+      "code": "3560",
+      "name": "ほぼ日",
+      "rank": "S",
+      "breakout_quality": "約2ヶ月ぶりの大高値ブレイクアウト・ストップ高水準の高値引け",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "拡大傾向",
+        "profit_growth": "順調",
+        "catalyst": "ほぼ日手帳等の独自ブランド商品展開力と需要拡大"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "強気の上昇トレンド"
+      },
+      "bear_case": "ストップ高後の短期的な過熱感による急反落リスク",
+      "invalidation": "ブレイクポイントである前高値4,690円を下回って定着した場合",
+      "analysis_reason": "7月につけた前高値4,690円を大幅に上回りストップ高水準で高値引け。2ヶ月間の揉み合いで溜まったエネルギーが一気に噴出し上値追いが期待できる。",
+      "action_plan": "翌日寄付きからの追撃買い、または初押しでの買いエントリー。"
+    },
+    {
+      "code": "4436",
+      "name": "ミンカブ・ジ・インフォノイド",
+      "rank": "S",
+      "breakout_quality": "約4ヶ月ぶりの保ち合い上放れ・節目の600円高値引け",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "回復傾向",
+        "profit_growth": "改善基調",
+        "catalyst": "メディア事業および金融ITソリューションの拡大"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "底値圏からの上昇転換トレンド"
+      },
+      "bear_case": " psychological barrierである600円での利食い売り圧力",
+      "invalidation": "前高値564円を下回って定着した場合",
+      "analysis_reason": "5月以来約4ヶ月間の底値圏ベースを力強く上抜け、節目の600円で高値引け。長期底練りからのブレイクアウトでトレンド転換の初期波動となる可能性が高い。",
+      "action_plan": "寄り付きからの買戻しを狙ったエントリー。"
+    },
+    {
+      "code": "3842",
+      "name": "ネクストジェン",
+      "rank": "A",
+      "breakout_quality": "約7ヶ月ぶりの長期ベースブレイクアウト",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "堅調",
+        "profit_growth": "改善傾向",
+        "catalyst": "通信・音声ソリューションおよびセキュリティ需要の伸び"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "中長期上昇トレンドへの回帰"
+      },
+      "bear_case": "高値1,280円から引け値1,275円にかけて見られた短期的な利益確定売り",
+      "invalidation": "前高値1,240円を下回って定着した場合",
+      "analysis_reason": "今年2月以来7ヶ月ぶりの高値更新により長期の売り圧力を完全消化。本格的な上昇トレンド突入が示唆される。",
+      "action_plan": "1,240円〜1,275円付近の押し目を待って買いエントリー。"
+    },
+    {
+      "code": "5252",
+      "name": "日本ナレッジ",
+      "rank": "S",
+      "breakout_quality": "半年の節目突破＆1,000円大台乗せ高値引け",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "高成長",
+        "profit_growth": "拡大基調",
+        "catalyst": "ソフトウェアテストおよびDX支援需要の拡大"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "強気の上昇トレンド"
+      },
+      "bear_case": "1,000円の大台突破達成感に伴う一時的な達成感売り",
+      "invalidation": "前高値989円を下回って定着した場合",
+      "analysis_reason": "半年ぶりの高値更新と同時に1,000円の心理的節目を力強く突破し高値引け。株価4桁乗せによる投資家層拡大と初動の推進力が期待される。",
+      "action_plan": "翌日寄り付きでの追撃買い。"
+    },
+    {
+      "code": "3132",
+      "name": "マクニカホールディングス",
+      "rank": "A",
+      "breakout_quality": "プライム主力・半導体関連の連日ブレイク＆4,000円台乗せ",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "高水準",
+        "profit_growth": "堅調",
+        "catalyst": "半導体市場の回復とAI・データセンター需要の増大"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "パーフェクトオーダーの強力な上昇トレンド"
+      },
+      "bear_case": "半導体セクター全体の外部環境悪化による連れ安",
+      "invalidation": "前高値3,997円を下回って定着した場合",
+      "analysis_reason": "プライム主力株として前日高値を一気に更新し4,000円大台に乗せ。機関投資家の買いが活発化し青天井モードに入っている。",
+      "action_plan": "4,000円近辺へのファースト・プルバック（初押し）での押し目買い。"
+    },
+    {
+      "code": "4847",
+      "name": "インテリジェント ウェイブ",
+      "rank": "A",
+      "breakout_quality": "金融IT・セキュリティの強力上放れ＆高値圏引け",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "安定成長",
+        "profit_growth": "順調",
+        "catalyst": "金融ITおよびサイバーセキュリティ投資の活発化"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "堅調な上昇トレンド"
+      },
+      "bear_case": "市場全体の地合い悪化による短期的な連動下落",
+      "invalidation": "前高値1,472円を下回って定着した場合",
+      "analysis_reason": "前日高値から明確な幅をもってブレイクし、高値圏（1,530円）で引け。強固なテーマ性を背景に継続的な上昇が期待できる。",
+      "action_plan": "前高値1,472円方向への押し目形成時の買い検討。"
+    },
+    {
+      "code": "479A",
+      "name": "ＰＲＯＮＩ",
+      "rank": "A",
+      "breakout_quality": "グロース成長株のボラティリティを伴う力強いブレイク",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "急拡大",
+        "profit_growth": "高成長期待",
+        "catalyst": "B2Bビジネスマッチングプラットフォームの需要増"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "急上昇トレンド"
+      },
+      "bear_case": "新鋭グロース銘柄特有のボラティリティの高さによる急反落",
+      "invalidation": "前高値2,139円を下回って定着した場合",
+      "analysis_reason": "前日高値を大きく超える+116円の上放れを達成し高値圏で着地。IPO・新鋭グロース特有の上値の軽さと強い推進力を保持。",
+      "action_plan": "ブレイク直後の勢いに乗る追撃買い、または浅い押し目買い。"
+    },
+    {
+      "code": "4933",
+      "name": "Ｉ－ｎｅ",
+      "rank": "B",
+      "breakout_quality": "プライム成長株の大幅ブレイクアウト（窓開け上放れ）",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "好調",
+        "profit_growth": "高水準",
+        "catalyst": "美容・消費財ブランドの強い業績モメンタム"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上昇トレンドの加速"
+      },
+      "bear_case": "窓開け（ギャップ）形成後の窓埋め調整リスク",
+      "invalidation": "前高値2,265円を下回って定着した場合",
+      "analysis_reason": "100円以上の窓開け上放れを見せ2,370円で着地。業績モメンタムが評価され短期資金が集まりやすい状態。",
+      "action_plan": "前高値2,265円付近へのファースト・プルバック確認後のエントリー。 "
+    }
+  ],
+  "source_urls": []
+}

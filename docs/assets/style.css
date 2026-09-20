@@ -1,0 +1,98 @@
+:root {
+  --bg-color: #05050a;
+  --panel-bg: rgba(10, 15, 30, 0.95);
+  --cyan: #00f0ff;
+  --fuchsia: #d946ef;
+  --yellow: #facc15;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-color: #1e293b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: monospace, sans-serif;
+  padding: 1rem;
+  line-height: 1.5;
+}
+.container { max-width: 900px; margin: 0 auto; }
+header {
+  border-bottom: 2px solid var(--cyan);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+h1 { font-size: 1.5rem; color: var(--cyan); text-transform: uppercase; }
+.btn {
+  background: #090d16;
+  color: var(--fuchsia);
+  border: 1px solid var(--fuchsia);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+  transition: 0.2s;
+}
+.btn:hover { background: var(--fuchsia); color: #000; }
+.card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+.card:hover { border-color: var(--cyan); }
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border: 1px solid;
+}
+.badge-s { color: var(--fuchsia); border-color: var(--fuchsia); background: rgba(217,70,239,0.1); }
+.badge-a { color: var(--cyan); border-color: var(--cyan); background: rgba(0,240,255,0.1); }
+.badge-b { color: var(--text-muted); border-color: var(--border-color); background: rgba(148,163,184,0.08); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem; margin: 0.8rem 0; background: rgba(0,0,0,0.4); padding: 0.6rem; border: 1px solid var(--border-color); }
+.reason { font-size: 0.85rem; border-left: 2px solid var(--cyan); padding-left: 0.6rem; margin-top: 0.5rem; color: #cbd5e1; }
+.overview-box { background: #090d16; border: 1px solid var(--fuchsia); padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; }
+.archive-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.archive-item { background: #090d16; border: 1px solid var(--border-color); padding: 0.6rem; display: flex; justify-content: space-between; font-size: 0.85rem; text-decoration: none; color: var(--cyan); }
+.archive-item:hover { border-color: var(--fuchsia); color: var(--fuchsia); }
+#toast {
+  position: fixed; bottom: 20px; right: 20px; background: #0f172a; border: 1px solid var(--cyan);
+  color: var(--cyan); padding: 10px 20px; font-size: 0.85rem; z-index: 1000;
+  display: none; box-shadow: 0 0 10px rgba(0,240,255,0.3);
+}
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 900;
+  display: none; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--panel-bg); border: 1px solid var(--fuchsia); max-width: 480px; width: 100%;
+  max-height: 80vh; display: flex; flex-direction: column; padding: 1.2rem;
+}
+.modal-box h2 { font-size: 1rem; color: var(--fuchsia); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+.modal-close:hover { color: var(--fuchsia); }
+#watchlist-items { list-style: none; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+#watchlist-items li {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+  background: #090d16; border: 1px solid var(--border-color); padding: 0.5rem 0.7rem; font-size: 0.85rem;
+}
+#watchlist-items a { color: var(--cyan); text-decoration: none; }
+#watchlist-items a:hover { color: var(--fuchsia); }
+.remove-btn {
+  background: none; border: 1px solid var(--border-color); color: var(--text-muted);
+  font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; flex-shrink: 0;
+}
+.remove-btn:hover { border-color: var(--fuchsia); color: var(--fuchsia); }
+.watchlist-empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0; }
+@media(max-width: 600px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .archive-list { grid-template-columns: 1fr; }
+}

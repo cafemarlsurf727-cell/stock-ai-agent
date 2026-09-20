@@ -1,268 +1,56 @@
 <!DOCTYPE html>
-<html lang="ja" class="dark">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-        body { font-family: 'Share Tech Mono', monospace, sans-serif; }
-        .cyber-bg {
-            background: linear-gradient(180deg, #05050a 0%, #090d16 100%);
-            background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 0), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 0);
-            background-size: 24px 24px;
-        }
-        .neon-glow-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
-        .neon-glow-fuchsia { box-shadow: 0 0 15px rgba(217, 70, 239, 0.3); }
-    </style>
+    <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="bg-black text-slate-100 min-h-screen p-4 md:p-8 cyber-bg selection:bg-fuchsia-500 selection:text-black">
-    <div class="max-w-4xl mx-auto space-y-8">
-        
-        <!-- HEADER -->
-        <header class="border-b-2 border-cyan-500 pb-4 flex flex-col md:flex-row justify-between md:items-end gap-3 neon-glow-cyan">
+<body>
+    <div class="container">
+        <header>
             <div>
-                <div class="flex items-center space-x-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-                    <span class="text-xs text-cyan-400 tracking-widest uppercase">SYSTEM OPERATIONAL // GEMINI 3.6 FLASH</span>
-                </div>
-                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-yellow-400 tracking-wider">
-                    ⚡ NEW-HIGH TERMINAL
-                </h1>
+                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
+                <h1>⚡ NEW-HIGH TERMINAL</h1>
             </div>
-            <div class="flex items-center gap-3">
-                <button onclick="toggleWatchlistModal()" class="text-xs bg-slate-950 border border-fuchsia-500 hover:bg-fuchsia-950 text-fuchsia-400 font-bold px-3 py-2 transition flex items-center gap-1 shadow-[0_0_10px_rgba(217,70,239,0.4)]">
-                    <span>⭐ WATCHLIST</span>
-                    <span class="text-yellow-400">[ <span id="watch-count">0</span> ]</span>
-                </button>
-                <div class="text-xs text-slate-400 font-mono border border-slate-800 p-2 bg-slate-950/80 hidden sm:block">
-                    UPDATED: <span class="text-yellow-400 font-bold">2026.09.19</span>
-                </div>
-            </div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
         </header>
-        
-        <!-- LATEST REPORT -->
-        <section class="bg-slate-950/90 border border-cyan-500/60 neon-glow-cyan p-6 space-y-4">
-            <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3">
-                <h2 class="text-lg md:text-xl font-bold text-cyan-400 tracking-wide flex items-center gap-2">
-                    <span>🔥 LATEST SCREENING REPORT</span>
-                    <span class="text-xs text-fuchsia-400 border border-fuchsia-500/50 px-2 py-0.5">2026.09.19</span>
-                </h2>
-                <a href="reports/2026-09-19.html" class="text-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold px-3 py-1.5 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
-                    EXPAND FULL SCREEN ↗
-                </a>
+
+        <div class="overview-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong>🔥 最新レポート (2026.09.20)</strong>
+                <a href="reports/2026-09-20.html" class="btn">FULL REPORT ↗</a>
             </div>
-            <div class="whitespace-pre-wrap leading-relaxed text-sm md:text-base text-slate-200 border-l-2 border-fuchsia-500 pl-4 max-h-[500px] overflow-y-auto font-sans">📊 **本日の新高値精鋭レポート**
+            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果とAI裏取りデータは「FULL REPORT」から確認できます。</p>
+        </div>
 
-新高値ブレイク投資法の観点から、単なる年初来高値の微更新（ディフェンシブ株やETF等）を除外し、**「出来高の伴い」「明確な節目突破」「強力な上昇モメンタム」**を備えた「本物の新高値銘柄」を厳選スクリーニングしました。
-
----
-
-🏆 **最優先注目銘柄**
-
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a><span class="text-slate-100 font-bold">ほぼ日</span><button onclick="toggleInlineStock('3560', 'ほぼ日', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> ほぼ日** (評価ランク: **S**)
-・**原動力**：主力商品の手帳事業やイベント・IPコラボ施策の好調が背景。7月高値（4,690円）を大幅に上抜ける大陽線でブレイクアウト。
-・**テクニカル/出来高評価**：約2ヶ月にわたる保ち合い（ベース形成）から一気に上方ブレイク。高値を5,200円まで伸ばし、出来高を伴う理想的なカップウィズハンドル（あるいはBOX上抜け）の形状を完成。
-・**アクションプラン**：モメンタムが非常に強いため、ブレイクライン（4,700円〜5,000円付近）への一時的な押し目を確認しながらの段階的エントリー、または直近高値超え追撃が有効。
-
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/3132.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3132 ]</a><span class="text-slate-100 font-bold">マクニカホールディングス</span><button onclick="toggleInlineStock('3132', 'マクニカホールディングス', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> マクニカホールディングス** (評価ランク: **A**)
-・**原動力**：半導体・AI・ネットワーク関連の需要回復期待と、プライム市場における割安是正の買戻し。
-・**テクニカル/出来高評価**：連日で年初来高値を更新し、4,100円台を突破。ダウ理論的にもきれいな上昇トレンドを描いており、売り圧力が非常に軽い状態。
-・**アクションプラン**：トレンドの継続性が高いため、5日移動平均線付近までの浅い押し目を狙った押し目買いスタイルが推奨されます。
-
----
-
-🔍 **その他の注目銘柄**
-
-・**219A Ｈｅａｒｔｓｅｅｄ** (評価: **A**) 
-　8月高値（2,646円）を突破。バイオ株特有の勢いがあり、新高値更新による青天井モードへ突入。
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/4417.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4417 ]</a><span class="text-slate-100 font-bold">グローバルセキュリティエキスパート</span><button onclick="toggleInlineStock('4417', 'グローバルセキュリティエキスパート', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> グローバルセキュリティエキスパート** (評価: **A**) 
-　サイバーセキュリティの好環境を背景に連日高値更新。上昇角度が強くモメンタム良好。
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/4847.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4847 ]</a><span class="text-slate-100 font-bold">インテリジェント</span><button onclick="toggleInlineStock('4847', 'インテリジェント', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> インテリジェント ウェイブ** (評価: **A**) 
-　金融・決済セキュリティ需要が堅調。プライム市場で連日高値を追う理想的な右肩上がりチャート。
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/3842.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3842 ]</a><span class="text-slate-100 font-bold">ネクストジェン</span><button onclick="toggleInlineStock('3842', 'ネクストジェン', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> ネクストジェン** (評価: **B**) 
-　今年2月以来（約7ヶ月ぶり）の長期高値をブレイク。底値練りを経たトレンド転換の初動として注目。
-・**<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/4436.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 4436 ]</a><span class="text-slate-100 font-bold">ミンカブ</span><button onclick="toggleInlineStock('4436', 'ミンカブ', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> ミンカブ・ジ・インフォノイド** (評価: **B**) 
-　5月高値を上抜き節目である600円に到達。下値ブレイクからの出遅れ修正の動き。
-
----
-
-💡 **本日の総括・相場感**
-
-本日の新高値銘柄リストからは、食品や内需ディフェンシブ株の微更新が散見されるものの、**「IT・セキュリティ」「AI/半導体商社」「明確な好材料を持つ中小型グロース株」**に強い資金流入が確認できます。
-
-新高値ブレイク投資におけるワンポイントアドバイスとして、**「数ヶ月ぶりの節目を大きく上抜けた銘柄（例: <span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/3560.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3560 ]</a><span class="text-slate-100 font-bold">ほぼ日</span><button onclick="toggleInlineStock('3560', 'ほぼ日', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> ほぼ日、<span class="inline-flex items-center gap-1 mx-0.5"><a href="https://finance.yahoo.co.jp/quote/3842.T" target="_blank" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 underline decoration-fuchsia-500 font-mono">[ 3842 ]</a><span class="text-slate-100 font-bold">ネクストジェン</span><button onclick="toggleInlineStock('3842', 'ネクストジェン', event)" class="text-xs hover:scale-125 transition-transform p-0.5 cursor-pointer" title="ワンタップで監視リストに登録/解除">⭐</button></span> ネクストジェン）」**は、上値のシコリ（戻り売り圧力）が消滅しているため株価が飛躍しやすい特徴があります。連日高値を追いかける銘柄とあわせて、こうした「長期ベースからの上抜け初動」を重点的に監視していきましょう。</div>
-        </section>
-        
-        <!-- ARCHIVE LOGS -->
-        <section class="space-y-4">
-            <h2 class="text-lg font-bold text-fuchsia-400 tracking-wider flex items-center gap-2">
-                <span>📂 SYSTEM ARCHIVES</span>
-                <span class="text-xs text-slate-500">// HISTORICAL LOGS</span>
-            </h2>
-            <ul class="grid grid-cols-1 md:grid-cols-2 gap-3"><li>
-            <a href="reports/2026-09-19.html" class="group block p-3 bg-slate-950 border border-cyan-500/30 hover:border-fuchsia-500 hover:shadow-[0_0_15px_rgba(217,70,239,0.4)] transition duration-200 flex justify-between items-center text-sm font-mono">
-                <span class="text-cyan-400 group-hover:text-fuchsia-400 transition">▶ ARCHIVE // 2026-09-19</span>
-                <span class="text-xs text-slate-500 group-hover:text-yellow-400">ACCESS LOG →</span>
-            </a>
-            </li>
+        <section>
+            <h2 style="font-size:1rem; color:var(--fuchsia); margin-bottom:0.8rem;">📂 SYSTEM ARCHIVES</h2>
+            <ul class="archive-list"><li>
+        <a href="reports/2026-09-20.html" class="archive-item">
+            <span>▶ ARCHIVE // 2026-09-20</span>
+            <span>ACCESS →</span>
+        </a>
+        </li>
+<li>
+        <a href="reports/2026-09-19.html" class="archive-item">
+            <span>▶ ARCHIVE // 2026-09-19</span>
+            <span>ACCESS →</span>
+        </a>
+        </li>
 </ul>
         </section>
-        
     </div>
     
-    <!-- WATCHLIST MODAL -->
-    <div id="watchlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden justify-center items-center p-4">
-        <div class="bg-slate-950 border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.4)] w-full max-w-lg p-6 space-y-4 font-mono">
-            <div class="flex justify-between items-center border-b border-fuchsia-500/40 pb-3">
-                <h3 class="text-lg font-bold text-fuchsia-400 flex items-center gap-2">
-                    <span>⭐ TARGET WATCHLIST</span>
-                </h3>
-                <button onclick="toggleWatchlistModal()" class="text-slate-400 hover:text-fuchsia-400 text-xl font-bold">✕</button>
-            </div>
-
-            <!-- ADD FORM -->
-            <div class="space-y-2 bg-slate-900/80 p-3 border border-slate-800">
-                <p class="text-xs text-cyan-400">手動で監視対象を追加:</p>
-                <div class="flex gap-2">
-                    <input id="input-code" type="text" placeholder="コード (7203)" maxlength="4" class="bg-black border border-cyan-500/50 text-cyan-400 text-xs p-2 w-28 focus:outline-none focus:border-cyan-400">
-                    <input id="input-name" type="text" placeholder="銘柄名 (トヨタ自動車)" class="bg-black border border-cyan-500/50 text-slate-200 text-xs p-2 flex-1 focus:outline-none focus:border-cyan-400">
-                    <button onclick="addStockToWatchlist()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-black font-bold text-xs px-3 py-2 transition shadow-[0_0_10px_rgba(217,70,239,0.5)]">
-                        + ADD
-                    </button>
-                </div>
-            </div>
-
-            <!-- WATCHLIST ITEMS -->
-            <ul id="watchlist-items" class="space-y-2 max-h-64 overflow-y-auto pr-1"></ul>
-
-            <div class="pt-2 text-right">
-                <button onclick="toggleWatchlistModal()" class="text-xs text-slate-400 hover:text-slate-200 border border-slate-700 px-3 py-1">CLOSE</button>
-            </div>
+    <div id="watchlist-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>⭐ 監視リスト <button class="modal-close" aria-label="閉じる">✕</button></h2>
+            <ul id="watchlist-items"></ul>
         </div>
     </div>
-    
-    
-    <script>
-        let watchlist = JSON.parse(localStorage.getItem('cyber_stock_watchlist') || '[]');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            updateWatchlistCount();
-        });
-
-        function updateWatchlistCount() {
-            const el = document.getElementById('watch-count');
-            if (el) el.textContent = watchlist.length;
-        }
-
-        function toggleWatchlistModal() {
-            const modal = document.getElementById('watchlist-modal');
-            if (modal.classList.contains('hidden')) {
-                renderWatchlist();
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-
-        function toggleInlineStock(code, defaultName, ev) {
-            if (ev) ev.preventDefault();
-            const index = watchlist.findIndex(item => item.code === code);
-            
-            if (index >= 0) {
-                const removed = watchlist.splice(index, 1)[0];
-                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-                updateWatchlistCount();
-                renderWatchlist();
-                alert(`[ ${code} ] ${removed.name || ''} を監視リストから解除しました`);
-            } else {
-                const name = defaultName || ('銘柄 ' + code);
-                watchlist.push({ code, name });
-                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-                updateWatchlistCount();
-                renderWatchlist();
-                alert(`⭐ [ ${code} ] ${name} を監視リストに登録しました！`);
-            }
-        }
-
-        function addStockToWatchlist() {
-            const codeInput = document.getElementById('input-code');
-            const nameInput = document.getElementById('input-name');
-            const code = codeInput.value.trim();
-            const name = nameInput.value.trim() || ('銘柄 ' + code);
-
-            if (!code || !/^\d{4}$/.test(code)) {
-                alert('4桁の銘柄コードを入力してください（例: 7203）');
-                return;
-            }
-
-            if (watchlist.some(item => item.code === code)) {
-                alert('すでに監視リストに登録されています');
-                return;
-            }
-
-            watchlist.push({ code, name });
-            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-            
-            codeInput.value = '';
-            nameInput.value = '';
-            
-            updateWatchlistCount();
-            renderWatchlist();
-        }
-
-        function editStockName(code) {
-            const item = watchlist.find(i => i.code === code);
-            if (!item) return;
-            
-            const newName = prompt(`[ ${code} ] の新しい銘柄名を入力してください:`, item.name);
-            if (newName !== null && newName.trim() !== '') {
-                item.name = newName.trim();
-                localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-                renderWatchlist();
-            }
-        }
-
-        function removeStockFromWatchlist(code) {
-            watchlist = watchlist.filter(item => item.code !== code);
-            localStorage.setItem('cyber_stock_watchlist', JSON.stringify(watchlist));
-            updateWatchlistCount();
-            renderWatchlist();
-        }
-
-        function renderWatchlist() {
-            const listEl = document.getElementById('watchlist-items');
-            if (!listEl) return;
-
-            if (watchlist.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-500 text-xs py-4 text-center font-mono">監視銘柄は登録されていません</li>';
-                return;
-            }
-
-            listEl.innerHTML = watchlist.map(item => `
-                <li class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition font-mono gap-2">
-                    <div class="flex items-center gap-2 overflow-hidden flex-1">
-                        <span class="text-fuchsia-400 font-bold shrink-0">[ ${item.code} ]</span>
-                        <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank" class="text-slate-100 hover:text-cyan-400 font-bold text-sm truncate flex items-center gap-1 hover:underline" title="Yahoo!ファイナンスでチャートを開く">
-                            <span>${item.name || '銘柄名未設定'}</span>
-                            <span class="text-xs text-yellow-400 shrink-0">🔗</span>
-                        </a>
-                    </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button onclick="editStockName('${item.code}')" class="text-xs text-cyan-400 hover:text-white bg-slate-800 hover:bg-cyan-900 border border-cyan-500/30 px-2 py-1 transition font-bold" title="銘柄名を編集">
-                            ✏️ 編集
-                        </button>
-                        <button onclick="removeStockFromWatchlist('${item.code}')" class="text-xs text-red-400 hover:text-white bg-red-950/60 hover:bg-red-600 border border-red-500/40 px-2 py-1 transition font-bold flex items-center gap-1 shadow-[0_0_5px_rgba(239,68,68,0.3)]">
-                            🗑️ 監視解除
-                        </button>
-                    </div>
-                </li>
-            `).join('');
-        }
-    </script>
-    
+    <div id="toast"></div>
+    <script src="assets/app.js"></script>
 </body>
 </html>
