@@ -486,4 +486,335 @@ function removeFromWatchlist(code) {
 
 function renderWatchlistModal() {
     const listEl = document.getElementById('watchlist-items');
-    if (!listEl)
+    if (!listEl) return;
+
+    if (watchlist.length === 0) {
+        listEl.innerHTML = '<li class="watchlist-empty">監視銘柄はまだ登録されていません</li>';
+        return;
+    }
+
+    listEl.innerHTML = watchlist.map(item => `
+        <li>
+            <a href="https://finance.yahoo.co.jp/quote/${item.code}.T" target="_blank">[ ${item.code} ] ${item.name}</a>
+            <button class="remove-btn" data-code="${item.code}">解除</button>
+        </li>
+    `).join('');
+}
+"""
+    with open(os.path.join(assets_dir, "app.js"), "w", encoding="utf-8") as f:
+        f.write(js_content.strip())
+
+def build_line_messages(data, today_display, max_len=4500, max_messages=5):
+    """LINEの1通あたり上限に収まるよう複数メッセージに分割する"""
+    summary = data.get("summary", {})
+    stocks = data.get("evaluated_stocks", [])
+
+    blocks = [f"📊 本日の新高値精鋭レポート // {today_display}\n\n💡 総括: {summary.get('market_trend_comment', '')}"]
+
+    for s in stocks:
+        fund = s.get("fundamentals", {})
+        blocks.append(
+            f"▪️ [{s.get('code')}] {s.get('name')} (評価:{s.get('rank')} | 信頼度:{s.get('confidence')})\n"
+            f"  原動力: {fund.get('catalyst', 'N/A')}\n"
+            f"  反対材料: {s.get('bear_case', 'N/A')}\n"
+            f"  撤退条件: {s.get('invalidation', 'N/A')}\n"
+            f"  アクション: {s.get('action_plan', '観察継続')}"
+        )
+
+    messages = []
+    current = ""
+    for block in blocks:
+        block = block[:max_len]
+        if not current:
+            current = block
+        elif len(current) + len(block) + 2 <= max_len:
+            current += "\n\n" + block
+        else:
+            messages.append(current)
+            current = block
+    if current:
+        messages.append(current)
+
+    return messages[:max_messages]
+
+WATCHLIST_MODAL_HTML = """
+    <div id="watchlist-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>⭐ 監視リスト <button class="modal-close" aria-label="閉じる">✕</button></h2>
+            <ul id="watchlist-items"></ul>
+        </div>
+    </div>
+"""
+
+def create_dashboard_html(data, stock_dict):
+    """軽量CSS/JSを用いた高速HTMLファイルおよびアーカイブを生成します"""
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst)
+    today_str = now.strftime("%Y-%m-%d")
+    today_display = now.strftime("%Y.%m.%d")
+
+    docs_dir = "docs"
+    reports_dir = os.path.join(docs_dir, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+
+    summary = data.get("summary", {})
+    stocks = data.get("evaluated_stocks", [])
+    market_comment = escape_html(summary.get("market_trend_comment", "本日の相場感コメントなし"))
+    source_urls = data.get("source_urls", [])
+
+    cards_html = ""
+    for s in stocks:
+        raw_code = s.get("code", "")
+        raw_name_from_json = s.get("name", "")
+        resolved_code = normalize_code(raw_code, stock_dict, raw_name_from_json)
+        code = escape_html(resolved_code)
+
+        base_name = stock_dict.get(resolved_code, raw_name_from_json) or f"銘柄 {resolved_code}"
+        name = escape_html(dedupe_name(base_name))
+
+        rank = s.get("rank", "B")
+        rank = rank if rank in ("S", "A", "B") else "B"
+        rank_esc = escape_html(rank)
+        breakout = escape_html(s.get("breakout_quality", ""))
+        confidence = escape_html(s.get("confidence", "Medium"))
+        fund = s.get("fundamentals", {})
+        tech = s.get("technical", {})
+        bear = escape_html(s.get("bear_case", "特になし"))
+        inval = escape_html(s.get("invalidation", "トレンド割れ"))
+        reason = escape_html(s.get("analysis_reason", ""))
+        action = escape_html(s.get("action_plan", "観察継続"))
+
+        badge_class = {"S": "badge-s", "A": "badge-a", "B": "badge-b"}[rank]
+
+        cards_html += f"""
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span class="badge {badge_class}">RANK {rank_esc}</span>
+                    <a href="https://finance.yahoo.co.jp/quote/{code}.T" target="_blank" style="color:var(--cyan); font-weight:bold; font-size:1.1rem; text-decoration:none;">
+                        [ {code} ] {name} 🔗
+                    </a>
+                </div>
+                <button class="btn watch-btn" data-code="{code}" data-name="{name}">⭐ WATCH</button>
+            </div>
+
+            <div class="grid-2">
+                <div><span style="color:var(--text-muted);">ブレイク質:</span> {breakout}</div>
+                <div><span style="color:var(--text-muted);">アクション:</span> <span style="color:var(--yellow); font-weight:bold;">{action}</span></div>
+                <div><span style="color:var(--text-muted);">増収増益:</span> {'✅ 満たす' if fund.get('meets_growth_criteria') else '⚠️ 要確認'} (信頼度: {confidence})</div>
+                <div><span style="color:var(--text-muted);">出来高急増:</span> {'あり' if tech.get('volume_surge') else '確認中'}</div>
+                <div style="grid-column: span 2;"><span style="color:var(--text-muted);">原動力:</span> {escape_html(fund.get('catalyst', 'N/A'))}</div>
+                <div style="grid-column: span 2;"><span style="color:var(--text-muted);">反対材料 (Bear):</span> {bear}</div>
+                <div style="grid-column: span 2;"><span style="color:var(--text-muted);">撤退条件 (Invalidation):</span> {inval}</div>
+            </div>
+
+            <p class="reason">{reason}</p>
+        </div>
+        """
+
+    sources_html = ""
+    if source_urls:
+        links = "".join(
+            f'<li><a href="{escape_html(u)}" target="_blank" style="color:var(--cyan); font-size:0.8rem;">{escape_html(u)}</a></li>'
+            for u in source_urls
+        )
+        sources_html = f"""
+        <section style="margin-top:1.5rem;">
+            <h2 style="font-size:0.95rem; color:var(--fuchsia); margin-bottom:0.6rem;">参照した情報源</h2>
+            <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">{links}</ul>
+        </section>
+        """
+
+    disclaimer_html = """
+        <p style="font-size:0.7rem; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1.5rem;">
+            このページは自動生成された機械的なスクリーニング結果で、投資助言ではありません。業績数値は生成AIが検索して抽出したもので、誤りや古い情報を含む可能性があります。売買の判断前に必ず決算短信・適時開示の原文で確認してください。
+        </p>
+    """
+
+    report_html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>[ {today_display} ] HIGH-BREAK REPORT</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <a href="../index.html" style="color:var(--fuchsia); font-size:0.8rem; text-decoration:none;">≪ DASHBOARD</a>
+                <h1>⚡ ANALYSIS // {today_display}</h1>
+            </div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
+        </header>
+
+        <div class="overview-box">
+            <strong>💡 MARKET OVERVIEW:</strong> {market_comment}
+        </div>
+
+        <main>{cards_html}</main>
+        {sources_html}
+        {disclaimer_html}
+    </div>
+    {WATCHLIST_MODAL_HTML}
+    <div id="toast"></div>
+    <script src="../assets/app.js"></script>
+</body>
+</html>"""
+
+    today_file_path = os.path.join(reports_dir, f"{today_str}.html")
+    with open(today_file_path, "w", encoding="utf-8") as f:
+        f.write(report_html)
+
+    data_dir = os.path.join(docs_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    with open(os.path.join(data_dir, f"{today_str}.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    files = sorted([f for f in os.listdir(reports_dir) if f.endswith(".html")], reverse=True)
+    archive_links = ""
+    for file in files:
+        date_part = file.replace(".html", "")
+        archive_links += f'''<li>
+        <a href="reports/{file}" class="archive-item">
+            <span>▶ ARCHIVE // {date_part}</span>
+            <span>ACCESS →</span>
+        </a>
+        </li>\n'''
+
+    index_html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>CYBERPUNK // BREAKOUT STOCKS TERMINAL</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
+                <h1>⚡ NEW-HIGH TERMINAL</h1>
+            </div>
+            <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
+        </header>
+
+        <div class="overview-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong>🔥 最新レポート ({today_display})</strong>
+                <a href="reports/{today_str}.html" class="btn">FULL REPORT ↗</a>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果とAI裏取りデータは「FULL REPORT」から確認できます。</p>
+        </div>
+
+        <section>
+            <h2 style="font-size:1rem; color:var(--fuchsia); margin-bottom:0.8rem;">📂 SYSTEM ARCHIVES</h2>
+            <ul class="archive-list">{archive_links}</ul>
+        </section>
+    </div>
+    {WATCHLIST_MODAL_HTML}
+    <div id="toast"></div>
+    <script src="assets/app.js"></script>
+</body>
+</html>"""
+
+    with open(os.path.join(docs_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(index_html)
+
+    with open(os.path.join(docs_dir, ".nojekyll"), "w", encoding="utf-8") as f:
+        f.write("")
+
+    print("【成功】軽量CSS/JS及びダッシュボードの生成が完了しました。")
+    return build_line_messages(data, today_display)
+
+def send_line_push_messages(messages):
+    """LINE Messaging API経由でプッシュ通知を送信します"""
+    line_access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
+    line_user_id = os.environ.get("LINE_USER_ID", "").strip()
+
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {line_access_token}"
+    }
+
+    payload = {
+        "to": line_user_id,
+        "messages": [{"type": "text", "text": m} for m in messages]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=15)
+        if res.status_code == 200:
+            print(f"【成功】LINEへのレポート送信が正常に完了しました（{len(messages)}通）。")
+        else:
+            print(f"【エラー】LINE送信エラー (Status {res.status_code}): {res.text}")
+            sys.exit(1)
+    except Exception as e:
+        print(f"【エラー】LINE通信処理中に例外が発生しました: {e}")
+        sys.exit(1)
+
+def write_job_summary(data):
+    """GitHub Actions のジョブサマリーに出力します"""
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    stocks = data.get("evaluated_stocks", [])
+
+    lines = "\n".join(
+        f"| {s.get('rank')} | {s.get('code')} | {s.get('name')} | {s.get('confidence')} | {s.get('action_plan')} |"
+        for s in stocks
+    )
+    table = (
+        "### 📊 新高値スクリーニング結果\n\n"
+        f"対象 {data.get('summary', {}).get('total_scraped', 0)} 銘柄 / 抽出 {len(stocks)} 銘柄\n\n"
+        "| 評価 | コード | 銘柄名 | 信頼度 | アクション |\n|---|---|---|---|---|\n" + lines
+    )
+
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as f:
+            f.write(table + "\n")
+    else:
+        print(table)
+
+def main():
+    parser = argparse.ArgumentParser(description="新高値ブレイク 自動スクリーニングAPI")
+    parser.add_argument("--dry-run", action="store_true", help="LINEに送信せず、HTML生成とスクリーニングテストのみ行います")
+    parser.add_argument("--force", action="store_true", help="営業日判定を無視して強制実行します")
+    args = parser.parse_args()
+
+    print("1. 環境変数のチェック中...")
+    check_env_vars(require_line=not args.dry_run)
+
+    jst = timezone(timedelta(hours=9))
+    today_now = datetime.now(jst)
+
+    if not args.force and is_market_holiday(today_now):
+        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
+        sys.exit(0)
+
+    print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
+    build_static_assets()
+
+    print("3. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
+    stock_data, stock_dict, scraped_count = fetch_new_high_stocks()
+
+    print("4. マルチステージ Gemini API スクリーニング＆裏取り分析を実行中...")
+    json_data = analyze_stocks_multi_stage(stock_data, scraped_count)
+
+    print("5. 高速ダッシュボードHTML・JSONアーカイブを生成中...")
+    line_messages = create_dashboard_html(json_data, stock_dict)
+
+    write_job_summary(json_data)
+
+    if args.dry_run:
+        print("【ドライラン】--dry-run が指定されたため、LINEへの配信をスキップして終了します。")
+        sys.exit(0)
+
+    print("6. LINEへレポートを配信中...")
+    send_line_push_messages(line_messages)
+
+if __name__ == "__main__":
+    main()
