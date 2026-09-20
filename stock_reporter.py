@@ -111,7 +111,7 @@ def extract_grounding_urls(response):
     return urls
 
 def call_gemini_with_retry(client, model, contents_list, config=None):
-    """指数バックオフ＋ジッタ付きリトライ"""
+    """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。"""
     max_retries = 5
     for attempt in range(1, max_retries + 1):
         try:
@@ -122,7 +122,7 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
             code = getattr(e, "code", None)
             retryable = code in (429, 500, 503, 504)
             if not retryable or attempt == max_retries:
-                print(f"【エラー】Gemini API 失敗: {e}")
+                print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
                 raise
             delay = 60 if code == 429 else attempt * 10
             print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）。{delay}秒待機して再試行します。")
@@ -138,14 +138,14 @@ def call_gemini_with_retry(client, model, contents_list, config=None):
 def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
     client = genai.Client()
-    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.6-flash")
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.6-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.6-flash")
+    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
+    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
 
     print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
-あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点に基づき、特に有望な8銘柄を選定してください。
-銘柄コードは英字混在4桁（例: 219A, 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
+あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
+銘柄コードは英字混在4桁（例: 130A, 219A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
 【データ】
 {stock_data_text}
 """
@@ -154,8 +154,9 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
 
     print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
     stage2_prompt = f"""
-以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値や新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。
-銘柄コードは英字混在4桁（例: 219A）の場合があります。必ず元の表記のまま正確に引用してください。
+以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
+銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
+本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
 
 【Stage 1 候補データ】
 {stage1_candidates}
@@ -171,7 +172,9 @@ def analyze_stocks_multi_stage(stock_data_text, scraped_count):
     stage3_prompt = f"""
 以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
-codeフィールドは英字混在4桁（例: 219A）の場合があります。数字だけに丸めたりせず、元の表記のまま正確に引用してください。
+リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
+codeフィールドは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、元の表記のまま正確に引用してください。
+nameフィールドは会社名を1回だけ記載してください（同じ会社名を2回連結しないこと）。
 
 【リサーチ結果】
 {grounded_research}
@@ -194,8 +197,8 @@ codeフィールドは英字混在4桁（例: 219A）の場合があります。
                 "items": {
                     "type": "OBJECT",
                     "properties": {
-                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁（219A等）の場合は元の表記のまま。"},
-                        "name": {"type": "STRING"},
+                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁（130A等）の場合は元の表記のまま。"},
+                        "name": {"type": "STRING", "description": "会社名。1回だけ記載し、重複連結しないこと。"},
                         "rank": {"type": "STRING", "enum": ["S", "A", "B"]},
                         "breakout_quality": {"type": "STRING"},
                         "confidence": {"type": "STRING", "enum": ["High", "Medium", "Low"]},
@@ -260,21 +263,31 @@ def escape_html(text):
                 .replace("'", "&#39;"))
 
 def normalize_code(raw_code, stock_dict, raw_name=None):
-    """英字混在コード（219A, 130A等）を確実に認識・正規化する"""
+    """Geminiの自然文処理でコードが欠損・改変された場合に、
+    スクレイピング原本(stock_dict)と突き合わせて正しいコードへ復元する"""
     code = re.sub(r'[^0-9A-Za-z]', '', str(raw_code or '')).upper()
-    
-    if re.match(r'^\d[0-9A-Z]{3}$', code):
+
+    # まずスクレイピング原本に実在するコードかを確認（改変されていなければここで確定）
+    if code in stock_dict:
         return code
 
+    # 実在しない場合は、銘柄名から原本コードを逆引きして復元する
     if raw_name:
         for c, n in stock_dict.items():
             if n == raw_name or (n and (n in raw_name or raw_name in n)):
                 return c
-                
-    if code:
-        return code
-        
-    return "0000"
+
+    # 復元できなければ形式だけ整えた値を返す（存在しない可能性が高い）
+    return code or "0000"
+
+def dedupe_name(raw_name):
+    """『社名+区切り文字(1文字以上)+同じ社名』の完全重複だけを検出して片方に畳む。
+    区切りゼロで偶然対称な短い社名（ラクラク、サンサン等）は重複とみなさず保持する"""
+    if not raw_name:
+        return raw_name
+    raw_name = raw_name.strip()
+    m = re.match(r'^(.{2,})[\s⭐\-\|/・、,]+\1$', raw_name)
+    return m.group(1) if m else raw_name
 
 def build_static_assets():
     """軽量・高速な外部CSSとJSファイルを assets/ に生成します"""
@@ -536,25 +549,9 @@ def create_dashboard_html(data, stock_dict):
         raw_name_from_json = s.get("name", "")
         resolved_code = normalize_code(raw_code, stock_dict, raw_name_from_json)
         code = escape_html(resolved_code)
-        
-        base_name = stock_dict.get(resolved_code, raw_name_from_json)
-        if not base_name:
-            base_name = f"銘柄 {resolved_code}"
-            
-        clean_name = re.sub(r'^[0-9A-Za-z]{4}\s*', '', base_name).strip()
-        clean_name = clean_name.replace(f"[{code}]", "").strip()
-        
-        parts = clean_name.split()
-        if len(parts) >= 2 and parts[0] == parts[1]:
-            clean_name = parts[0]
-        else:
-            half_len = len(clean_name) // 2
-            if len(clean_name) > 2 and clean_name[:half_len] == clean_name[half_len:].strip():
-                clean_name = clean_name[:half_len].strip()
-                
-        if not clean_name:
-            clean_name = f"銘柄 {resolved_code}"
-        name = escape_html(clean_name)
+
+        base_name = stock_dict.get(resolved_code, raw_name_from_json) or f"銘柄 {resolved_code}"
+        name = escape_html(dedupe_name(base_name))
 
         rank = s.get("rank", "B")
         rank = rank if rank in ("S", "A", "B") else "B"
@@ -775,10 +772,9 @@ def main():
     jst = timezone(timedelta(hours=9))
     today_now = datetime.now(jst)
 
-    # 休日判定（必要に応じてコメントアウトしてテストしてください）
-    #if not args.force and is_market_holiday(today_now):
-    #    print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
-    #    sys.exit(0)
+    if not args.force and is_market_holiday(today_now):
+        print(f"本日 ({today_now.strftime('%Y-%m-%d')}) は休日（土日・祝日・年末年始）のため処理をスキップします。")
+        sys.exit(0)
 
     print("2. 外部静的アセット (assets/style.css, app.js) のビルド中...")
     build_static_assets()
