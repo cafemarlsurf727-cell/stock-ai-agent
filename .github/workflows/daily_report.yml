@@ -33,7 +33,7 @@ jobs:
           MODEL_TRIAGE: gemini-2.5-flash-lite
           MODEL_RESEARCH: gemini-2.5-flash
           MODEL_STRUCTURE: gemini-2.5-flash-lite
-        run: python stock_reporter.py --force
+        run: python stock_reporter.py --dry-run --force
 
       - name: Commit and push generated dashboard
         run: |
