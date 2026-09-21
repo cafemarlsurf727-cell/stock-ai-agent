@@ -30,9 +30,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-          MODEL_TRIAGE: gemini-2.5-flash-lite
-          MODEL_RESEARCH: gemini-2.5-flash
-          MODEL_STRUCTURE: gemini-2.5-flash-lite
+          MODEL_TRIAGE: gemini-3.5-flash-lite
+          MODEL_RESEARCH: gemini-3.8-flash
+          MODEL_STRUCTURE: gemini-3.5-flash-lite
+         
+        
         run: python stock_reporter.py --dry-run --force
 
       - name: Commit and push generated dashboard
