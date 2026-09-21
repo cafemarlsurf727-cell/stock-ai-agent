@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
 
+
 def check_env_vars(require_line=True):
     """GitHub Secrets等から必要な環境変数が渡されているか確認します"""
     required_vars = ["GEMINI_API_KEY"]
@@ -22,6 +23,7 @@ def check_env_vars(require_line=True):
     if missing:
         print(f"【エラー】以下の環境変数が設定されていません: {', '.join(missing)}")
         sys.exit(1)
+
 
 def is_market_holiday(date_obj):
     """土日・祝日・年末年始をチェックします"""
@@ -37,22 +39,35 @@ def is_market_holiday(date_obj):
         print("【警告】jpholiday が未インストールのため祝日判定をスキップします。")
     return False
 
+
 # 銘柄名として採用しない汎用ラベル（Yahoo!ファイナンス側の付随リンクのテキスト）
 GENERIC_LABELS = {
     "掲示板", "チャート", "ニュース", "時系列", "業績", "会社情報", "適時開示",
     "株主優待", "決算", "IR", "指標", "関連ニュース", "詳細", "取引", "予想",
 }
 
+YAHOO_BASE = "https://finance.yahoo.co.jp"
+YAHOO_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
+}
+
+# Stage 2 で銘柄ごとに取得するYahoo!ファイナンスのページ定義
+# (キー, パス, 抽出方式, 先頭に合わせるアンカー語, 最大文字数)
+STOCK_PAGES = [
+    ("top", "/quote/{code}.T", "text", ["前日終値", "始値", "出来高"], 2500),
+    ("performance", "/quote/{code}.T/performance", "text", ["売上高", "決算期", "経常利益"], 3000),
+    ("news", "/quote/{code}.T/news", "links", None, 1500),
+    ("disclosure", "/quote/{code}.T/disclosure", "links", None, 1500),
+]
+
+
 def fetch_new_high_stocks():
     """Yahoo!ファイナンスから年初来高値銘柄データと銘柄名辞書を取得します"""
     url = "https://finance.yahoo.co.jp/stocks/ranking/yearToDateHigh?market=all"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
-    }
 
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=YAHOO_HEADERS, timeout=15)
         response.raise_for_status()
         response.encoding = 'utf-8'
     except Exception as e:
@@ -115,20 +130,6 @@ def fetch_new_high_stocks():
     scraped_count = max(len(data_rows) - 1, 0)
     return "\n".join(data_rows), stock_dict, scraped_count
 
-def extract_grounding_urls(response):
-    """検索グラウンディングで実際に参照されたURLだけを取り出す"""
-    urls = []
-    try:
-        for cand in response.candidates or []:
-            meta = getattr(cand, "grounding_metadata", None)
-            for chunk in getattr(meta, "grounding_chunks", None) or []:
-                web = getattr(chunk, "web", None)
-                uri = getattr(web, "uri", None)
-                if uri and uri not in urls:
-                    urls.append(uri)
-    except Exception:
-        pass
-    return urls
 
 def _is_quota_exhausted(e):
     """時間経過では回復しない、利用枠(クォータ)そのものの枯渇かどうかを判定する。
@@ -136,10 +137,10 @@ def _is_quota_exhausted(e):
     msg = str(e)
     return "RESOURCE_EXHAUSTED" in msg and ("quota" in msg.lower() or "billing" in msg.lower())
 
-def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=6):
+
+def call_gemini_with_retry(client, model, contents_list, config=None, max_retries=4):
     """指数バックオフ＋ジッタ付きリトライ。429/5xx系のみ再試行し、それ以外は即座に失敗させる。
-    429/503（レート制限・過負荷）は特に長めの指数バックオフで粘るが、
-    クォータそのものの枯渇（課金・プラン起因）は待っても無意味なので即座に失敗させる。"""
+    クォータそのものの枯渇（課金・プラン起因）は待っても無意味なので、このモデルでは即座に失敗させる。"""
     for attempt in range(1, max_retries + 1):
         try:
             if config:
@@ -149,71 +150,274 @@ def call_gemini_with_retry(client, model, contents_list, config=None, max_retrie
             code = getattr(e, "code", None)
 
             if code == 429 and _is_quota_exhausted(e):
-                print("【エラー】Gemini APIの利用枠（クォータ）を使い切っています。時間経過を待つリトライは意味がないため、ここで処理を中断します。")
-                print("　→ https://ai.dev/rate-limit で使用状況を確認し、無料枠の上限か課金設定の要否を確認してください。")
+                print(f"【エラー】モデル {model} の利用枠（クォータ）を使い切っています。待機してもこのモデルでは回復しないため、リトライを打ち切ります。")
+                print("　→ https://ai.dev/rate-limit で使用状況を確認してください。")
                 raise
 
             retryable = code in (429, 500, 503, 504)
             if not retryable or attempt == max_retries:
-                print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）: {e}")
+                print(f"【エラー】Gemini API 失敗（リトライ対象外、または上限到達）[{model}]: {e}")
                 raise
             if code in (429, 503):
-                delay = min(180, 20 * (2 ** (attempt - 1))) + random.uniform(0, 5)
+                delay = min(120, 20 * (2 ** (attempt - 1))) + random.uniform(0, 5)
             else:
                 delay = attempt * 10
-            print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）。{delay:.0f}秒待機して再試行します。")
+            print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗（HTTP {code}）[{model}]。{delay:.0f}秒待機して再試行します。")
             time.sleep(delay)
         except Exception as e:
             if attempt == max_retries:
-                print(f"【エラー】Gemini API 呼び出しで想定外の例外が発生しました: {e}")
+                print(f"【エラー】Gemini API 呼び出しで想定外の例外が発生しました [{model}]: {e}")
                 raise
             delay = attempt * 10
             print(f"【警告】Gemini API 試行 ({attempt}/{max_retries}) 失敗: {e}。{delay}秒待機して再試行します。")
             time.sleep(delay)
 
-def analyze_stocks_multi_stage(stock_data_text, scraped_count):
-    """Stage 1, 2, 3 を経由してマルチステップで高精度スクリーニングを行います"""
-    client = genai.Client()
-    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.7-flash")
-    model_research = os.environ.get("MODEL_RESEARCH", "gemini-3.8-flash")
-    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.7-flash")
 
+def call_gemini_with_fallback(client, models, contents_list, config=None):
+    """候補モデルを順に試す。あるモデルが混雑(503)・枠切れ(429)・提供終了(404)などで
+    失敗した場合は、次のモデルに切り替える。全滅した場合のみ例外を投げる。"""
+    tried = []
+    last_err = None
+    for m in models:
+        if not m or m in tried:
+            continue
+        tried.append(m)
+        try:
+            return call_gemini_with_retry(client, m, contents_list, config=config)
+        except Exception as e:
+            last_err = e
+            print(f"【警告】モデル {m} で失敗しました。次の候補モデルがあれば切り替えます。")
+    if last_err is None:
+        raise RuntimeError("利用できるモデルが指定されていません。")
+    raise last_err
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 用: Yahoo!ファイナンスの個別銘柄ページから一次情報を直接取得する
+# ---------------------------------------------------------------------------
+
+def fetch_page(url, timeout=15):
+    """ページを取得してBeautifulSoupを返す。失敗時は1回だけ再試行し、それでも駄目ならNoneを返す。"""
+    for attempt in (1, 2):
+        try:
+            r = requests.get(url, headers=YAHOO_HEADERS, timeout=timeout)
+            if r.status_code == 200:
+                r.encoding = "utf-8"
+                return BeautifulSoup(r.text, "html.parser")
+            print(f"　【警告】取得失敗 HTTP {r.status_code}: {url}")
+            if r.status_code in (403, 404):
+                return None
+        except Exception as e:
+            print(f"　【警告】取得例外 ({attempt}/2): {url} : {e}")
+        time.sleep(2)
+    return None
+
+
+def extract_page_text(soup, anchors=None, max_chars=2500):
+    """ページ全体のテキストを取り出し、アンカー語（例:「売上高」）の付近から先頭を切り出す。
+    ナビゲーション等のノイズで文字数枠を使い切らないための工夫。"""
+    for tag in soup(["script", "style", "noscript", "svg"]):
+        tag.decompose()
+    text = soup.get_text(" | ", strip=True)
+    text = " ".join(text.split())
+    start = 0
+    if anchors:
+        idxs = [text.find(a) for a in anchors if text.find(a) != -1]
+        if idxs:
+            start = max(0, min(idxs) - 30)
+    return text[start:start + max_chars]
+
+
+def extract_link_titles(soup, max_chars=1500, min_len=10):
+    """ニュース・適時開示ページから、見出しらしい長さのリンク文言（日付を含む親要素のテキスト）を集める。"""
+    seen = []
+    for a in soup.find_all("a", href=True):
+        title = a.get_text(" ", strip=True)
+        if len(title) < min_len:
+            continue
+        container = a.find_parent("li")
+        text = container.get_text(" ", strip=True) if container else title
+        text = " ".join(text.split())[:150]
+        if text and text not in seen:
+            seen.append(text)
+    joined = "\n".join(f"- {t}" for t in seen)
+    return joined[:max_chars]
+
+
+def collect_stock_materials(code):
+    """1銘柄ぶんの一次情報（株価・指標、業績、ニュース、適時開示）を取得する。
+    取得できなかった項目は文字列で明示し、AIが数値を創作しないようにする。"""
+    materials = {}
+    ok_urls = []
+    for key, path, kind, anchors, limit in STOCK_PAGES:
+        url = f"{YAHOO_BASE}{path.format(code=code)}"
+        soup = fetch_page(url)
+        time.sleep(1.0)  # 相手サーバーへの負荷を抑える
+        if soup is None:
+            materials[key] = "取得失敗"
+            continue
+        if kind == "text":
+            content = extract_page_text(soup, anchors=anchors, max_chars=limit)
+        else:
+            content = extract_link_titles(soup, max_chars=limit)
+        if not content:
+            materials[key] = "取得できず（ページに該当情報なし）"
+        else:
+            materials[key] = content
+            ok_urls.append(url)
+    return materials, ok_urls
+
+
+def normalize_code(raw_code, stock_dict, raw_name=None):
+    """Geminiの自然文処理でコードが欠損・改変された場合に、
+    スクレイピング原本(stock_dict)と突き合わせて正しいコードへ復元する"""
+    code = re.sub(r'[^0-9A-Za-z]', '', str(raw_code or '')).upper()
+
+    # まずスクレイピング原本に実在するコードかを確認（改変されていなければここで確定）
+    if code in stock_dict:
+        return code
+
+    # 実在しない場合は、銘柄名から原本コードを逆引きして復元する
+    if raw_name:
+        for c, n in stock_dict.items():
+            if n == raw_name or (n and (n in raw_name or raw_name in n)):
+                return c
+
+    # 復元できなければ形式だけ整えた値を返す（存在しない可能性が高い）
+    return code or "0000"
+
+
+def pick_candidates(stage1_text, stock_dict, n=8):
+    """Stage 1 のJSON出力から候補銘柄を取り出し、スクレイピング原本に実在するコードだけに絞る。
+    出力が壊れていて有効な候補が3件未満の場合は、ランキング表の上位から機械的に補完する。"""
+    picked = []
+    try:
+        data = json.loads(stage1_text)
+        for item in data.get("candidates", []):
+            code = normalize_code(item.get("code"), stock_dict)
+            if code in stock_dict and code not in [p["code"] for p in picked]:
+                picked.append({"code": code, "reason": str(item.get("reason", ""))})
+    except Exception as e:
+        print(f"【警告】Stage 1 の出力を解析できませんでした: {e}")
+
+    if len(picked) < 3:
+        print("【警告】Stage 1 の有効な候補が少ないため、ランキング表の上位から補完します。")
+        for code in stock_dict:
+            if len(picked) >= n:
+                break
+            if code not in [p["code"] for p in picked]:
+                picked.append({"code": code, "reason": "（機械的補完：ランキング上位）"})
+
+    return picked[:n]
+
+
+def format_materials_block(candidates, stock_dict, stock_data_text, all_materials):
+    """Stage 3 に渡す、銘柄ごとの一次情報ブロックを組み立てる"""
+    blocks = []
+    for c in candidates:
+        code = c["code"]
+        name = stock_dict.get(code, "")
+        pattern = r'(?<![0-9A-Za-z])' + re.escape(code) + r'(?![0-9A-Za-z])'
+        row_lines = [ln for ln in stock_data_text.splitlines() if re.search(pattern, ln)]
+        m = all_materials[code]
+        blocks.append(
+            f"=== [{code}] {name} ===\n"
+            f"【Stage 1 選定理由】{c['reason']}\n"
+            f"【ランキング表の該当行】{' / '.join(row_lines[:2]) if row_lines else 'なし'}\n"
+            f"【株価・指標ページ】{m['top']}\n"
+            f"【業績ページ】{m['performance']}\n"
+            f"【ニュース見出し】\n{m['news']}\n"
+            f"【適時開示見出し】\n{m['disclosure']}"
+        )
+    return "\n\n".join(blocks)
+
+
+def analyze_stocks_multi_stage(stock_data_text, stock_dict, scraped_count):
+    """Stage 1（絞り込み）→ Stage 2（一次情報の直接取得）→ Stage 3（JSON化）で分析します。
+    検索グラウンディングは使わないため、無料枠のFlash-Lite系モデルだけで動作します。"""
+    if not stock_dict:
+        print("【エラー】銘柄データを取得できなかったため、分析を中断します。")
+        sys.exit(1)
+
+    client = genai.Client()
+    model_triage = os.environ.get("MODEL_TRIAGE", "gemini-3.5-flash-lite")
+    model_structure = os.environ.get("MODEL_STRUCTURE", "gemini-3.5-flash-lite")
+    model_fallback = os.environ.get("MODEL_FALLBACK", "gemini-3.1-flash-lite")
+
+    # ---------------- Stage 1 ----------------
     print("--> [Stage 1] 検索なしで候補銘柄を8選に絞り込み中...")
     stage1_prompt = f"""
 あなたはプロの株式アナリストです。以下の新高値更新銘柄データから、「新高値ブレイク投資法」の観点（上場来高値・2年以上ブレイク、上値の軽さ、出来高急増、業績期待）に基づき、特に有望な8銘柄を選定してください。
 銘柄コードは英字混在4桁（例: 130A, 219A, 9A76）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
+データに存在しない銘柄コードを選んではいけません。
+各銘柄について、選定理由を1〜2文で簡潔に書いてください。
 【データ】
 {stock_data_text}
 """
-    res1 = call_gemini_with_retry(client, model_triage, [stage1_prompt])
-    stage1_candidates = res1.text
-
-    print("--> [Stage 2] Google検索グラウンディングで決算・材料の裏取り中...")
-    stage2_prompt = f"""
-以下のStage 1で選定された候補銘柄について、Google検索ツールを活用して直近の決算数値（売上・経常利益の前年同期比）、新高値突破の原動力、TOBや非公開化の予定がないか等の事実確認（裏取り）を行ってください。事実が確認できなかった項目は「未確認」と明示してください。
-銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、必ず元の表記のまま正確に引用してください。
-本文中にURLを書き出す必要はありません（参照元は別途システム側で取得します）。
-
-【Stage 1 候補データ】
-{stage1_candidates}
-"""
-    config_search = types.GenerateContentConfig(
-        tools=[types.Tool(google_search=types.GoogleSearch())]
+    stage1_schema = {
+        "type": "OBJECT",
+        "properties": {
+            "candidates": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "code": {"type": "STRING", "description": "証券コード。英字混在4桁の場合は元の表記のまま。"},
+                        "reason": {"type": "STRING", "description": "選定理由（1〜2文）"}
+                    },
+                    "required": ["code", "reason"]
+                }
+            }
+        },
+        "required": ["candidates"]
+    }
+    config_stage1 = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=stage1_schema
     )
-    res2 = call_gemini_with_retry(client, model_research, [stage2_prompt], config=config_search)
-    grounded_research = res2.text
-    grounding_urls = extract_grounding_urls(res2)
+    res1 = call_gemini_with_fallback(
+        client, [model_triage, model_fallback], [stage1_prompt], config=config_stage1
+    )
+    candidates = pick_candidates(res1.text, stock_dict, n=8)
+    print(f"　候補: {', '.join(c['code'] for c in candidates)}")
 
-    print("--> [Stage 3] response_schemaを用いて厳密なJSON構造データに変換中...")
+    # ---------------- Stage 2 ----------------
+    print("--> [Stage 2] Yahoo!ファイナンスの個別ページから一次情報を直接取得中...")
+    all_materials = {}
+    source_urls = []
+    for c in candidates:
+        code = c["code"]
+        print(f"　[{code}] {stock_dict.get(code, '')} を取得中...")
+        materials, ok_urls = collect_stock_materials(code)
+        all_materials[code] = materials
+        source_urls.extend(ok_urls)
+        summary = ", ".join(f"{k}={len(v)}字" for k, v in materials.items())
+        print(f"　　取得結果: {summary}")
+
+    materials_block = format_materials_block(candidates, stock_dict, stock_data_text, all_materials)
+
+    # ---------------- Stage 3 ----------------
+    print("--> [Stage 3] 取得した一次情報をもとに、厳密なJSON構造データへ変換中...")
     stage3_prompt = f"""
-以下のリサーチ結果をベースに、指定された厳密なJSONスキーマ形式のみで結果を出力してください。
-反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を含めてください。
-リサーチ結果に書かれていない数値や事実を創作してはいけません。未確認の項目はそのまま「未確認」と書いてください。
-codeフィールドは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、元の表記のまま正確に引用してください。
-nameフィールドは会社名を1回だけ記載してください（同じ会社名を2回連結しないこと）。
+あなたはプロの株式アナリストです。以下は、新高値更新銘柄の候補について、Yahoo!ファイナンスの個別ページから機械的に取得した一次情報（テキスト）です。
+この情報だけを根拠に、指定された厳密なJSONスキーマ形式で全候補を評価してください。
 
-【リサーチ結果】
-{grounded_research}
+【厳守ルール】
+- 提供された一次情報に書かれていない数値や事実を創作してはいけません。読み取れない項目は「未確認」と書いてください。
+- revenue_growth / profit_growth は、業績ページのテキストから前年同期比や前期比が読み取れる場合のみ数値（例: 「+15.2%」）を記載し、算出根拠が不明なら「未確認」としてください。
+- meets_growth_criteria は、売上高+10%以上かつ経常利益+20%以上の両方が一次情報から確認できた場合のみ true。それ以外（未確認を含む）は false。
+- catalyst（新高値突破の原動力）は、ニュース見出し・適時開示見出しから読み取れる範囲で書き、読み取れなければ「未確認」。
+- TOB・完全子会社化・非公開化・上場廃止に関する記載が見つかった銘柄は、rank を B にし、bear_case にその旨を明記してください。
+- volume_surge は、一次情報から出来高の急増が読み取れる場合のみ true。不明なら false。
+- moving_average_trend は、一次情報から読み取れなければ「未確認」。
+- 一次情報の多くが「取得失敗」「取得できず」の銘柄は、confidence を Low にしてください。
+- 銘柄コードは英字混在4桁（例: 130A）の場合があります。数字だけに丸めたり、末尾の英字を省略したりせず、元の表記のまま正確に引用してください。
+- name フィールドは会社名を1回だけ記載してください（同じ会社名を2回連結しないこと）。
+- 反対材料（bear_case）と撤退条件（invalidation）、信頼度（confidence: High/Medium/Low）を必ず含めてください。
+- 全候補銘柄を evaluated_stocks に含め、rank（S/A/B）で優劣を付けてください。
+
+【一次情報】
+{materials_block}
 """
 
     json_schema = {
@@ -270,10 +474,13 @@ nameフィールドは会社名を1回だけ記載してください（同じ会
 
     config_json = types.GenerateContentConfig(
         response_mime_type="application/json",
-        response_schema=json_schema
+        response_schema=json_schema,
+        max_output_tokens=32000
     )
 
-    res3 = call_gemini_with_retry(client, model_structure, [stage3_prompt], config=config_json)
+    res3 = call_gemini_with_fallback(
+        client, [model_structure, model_fallback], [stage3_prompt], config=config_json
+    )
 
     try:
         parsed_data = json.loads(res3.text)
@@ -284,9 +491,10 @@ nameフィールドは会社名を1回だけ記載してください（同じ会
 
     parsed_data.setdefault("summary", {})["total_scraped"] = scraped_count
     parsed_data["summary"]["top_picks_count"] = len(parsed_data.get("evaluated_stocks", []))
-    parsed_data["source_urls"] = grounding_urls
+    parsed_data["source_urls"] = source_urls
 
     return parsed_data
+
 
 def escape_html(text):
     """HTMLエスケープ処理"""
@@ -298,23 +506,6 @@ def escape_html(text):
                 .replace('"', "&quot;")
                 .replace("'", "&#39;"))
 
-def normalize_code(raw_code, stock_dict, raw_name=None):
-    """Geminiの自然文処理でコードが欠損・改変された場合に、
-    スクレイピング原本(stock_dict)と突き合わせて正しいコードへ復元する"""
-    code = re.sub(r'[^0-9A-Za-z]', '', str(raw_code or '')).upper()
-
-    # まずスクレイピング原本に実在するコードかを確認（改変されていなければここで確定）
-    if code in stock_dict:
-        return code
-
-    # 実在しない場合は、銘柄名から原本コードを逆引きして復元する
-    if raw_name:
-        for c, n in stock_dict.items():
-            if n == raw_name or (n and (n in raw_name or raw_name in n)):
-                return c
-
-    # 復元できなければ形式だけ整えた値を返す（存在しない可能性が高い）
-    return code or "0000"
 
 def dedupe_name(raw_name):
     """『社名+区切り文字(1文字以上)+同じ社名』の完全重複だけを検出して片方に畳む。
@@ -324,6 +515,7 @@ def dedupe_name(raw_name):
     raw_name = raw_name.strip()
     m = re.match(r'^(.{2,})[\s⭐\-\|/・、,]+\1$', raw_name)
     return m.group(1) if m else raw_name
+
 
 def build_static_assets():
     """軽量・高速な外部CSSとJSファイルを assets/ に生成します"""
@@ -521,6 +713,7 @@ function renderWatchlistModal() {
     with open(os.path.join(assets_dir, "app.js"), "w", encoding="utf-8") as f:
         f.write(js_content.strip())
 
+
 def build_line_messages(data, today_display, max_len=4500, max_messages=5):
     """LINEの1通あたり上限に収まるよう複数メッセージに分割する"""
     summary = data.get("summary", {})
@@ -554,6 +747,7 @@ def build_line_messages(data, today_display, max_len=4500, max_messages=5):
 
     return messages[:max_messages]
 
+
 WATCHLIST_MODAL_HTML = """
     <div id="watchlist-modal" class="modal-overlay">
         <div class="modal-box">
@@ -562,6 +756,7 @@ WATCHLIST_MODAL_HTML = """
         </div>
     </div>
 """
+
 
 def create_dashboard_html(data, stock_dict):
     """軽量CSS/JSを用いた高速HTMLファイルおよびアーカイブを生成します"""
@@ -637,14 +832,14 @@ def create_dashboard_html(data, stock_dict):
         )
         sources_html = f"""
         <section style="margin-top:1.5rem;">
-            <h2 style="font-size:0.95rem; color:var(--fuchsia); margin-bottom:0.6rem;">参照した情報源</h2>
+            <h2 style="font-size:0.95rem; color:var(--fuchsia); margin-bottom:0.6rem;">参照した情報源（Yahoo!ファイナンス）</h2>
             <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">{links}</ul>
         </section>
         """
 
     disclaimer_html = """
         <p style="font-size:0.7rem; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1.5rem;">
-            このページは自動生成された機械的なスクリーニング結果で、投資助言ではありません。業績数値は生成AIが検索して抽出したもので、誤りや古い情報を含む可能性があります。売買の判断前に必ず決算短信・適時開示の原文で確認してください。
+            このページは自動生成された機械的なスクリーニング結果で、投資助言ではありません。業績・材料はYahoo!ファイナンスの公開ページから機械的に取得したテキストを生成AIが整理したもので、取得漏れや誤り、古い情報を含む可能性があります。売買の判断前に必ず決算短信・適時開示の原文で確認してください。
         </p>
     """
 
@@ -714,7 +909,7 @@ def create_dashboard_html(data, stock_dict):
     <div class="container">
         <header>
             <div>
-                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE GROUNDING</span>
+                <span style="color:var(--cyan); font-size:0.75rem;">SYSTEM OPERATIONAL // MULTI-STAGE SCREENING</span>
                 <h1>⚡ NEW-HIGH TERMINAL</h1>
             </div>
             <button class="btn open-watchlist-btn">⭐ WATCHLIST [ <span class="watch-count">0</span> ]</button>
@@ -725,7 +920,7 @@ def create_dashboard_html(data, stock_dict):
                 <strong>🔥 最新レポート ({today_display})</strong>
                 <a href="reports/{today_str}.html" class="btn">FULL REPORT ↗</a>
             </div>
-            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果とAI裏取りデータは「FULL REPORT」から確認できます。</p>
+            <p style="color:var(--text-muted); font-size:0.8rem;">最新のスクリーニング結果と一次情報に基づく分析は「FULL REPORT」から確認できます。</p>
         </div>
 
         <section>
@@ -747,6 +942,7 @@ def create_dashboard_html(data, stock_dict):
 
     print("【成功】軽量CSS/JS及びダッシュボードの生成が完了しました。")
     return build_line_messages(data, today_display)
+
 
 def send_line_push_messages(messages):
     """LINE Messaging API経由でプッシュ通知を送信します"""
@@ -775,6 +971,7 @@ def send_line_push_messages(messages):
         print(f"【エラー】LINE通信処理中に例外が発生しました: {e}")
         sys.exit(1)
 
+
 def write_job_summary(data):
     """GitHub Actions のジョブサマリーに出力します"""
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -795,6 +992,7 @@ def write_job_summary(data):
             f.write(table + "\n")
     else:
         print(table)
+
 
 def main():
     parser = argparse.ArgumentParser(description="新高値ブレイク 自動スクリーニングAPI")
@@ -818,8 +1016,8 @@ def main():
     print("3. Yahoo!ファイナンスから新高値更新銘柄データを取得中...")
     stock_data, stock_dict, scraped_count = fetch_new_high_stocks()
 
-    print("4. マルチステージ Gemini API スクリーニング＆裏取り分析を実行中...")
-    json_data = analyze_stocks_multi_stage(stock_data, scraped_count)
+    print("4. マルチステージ Gemini API スクリーニング＆一次情報分析を実行中...")
+    json_data = analyze_stocks_multi_stage(stock_data, stock_dict, scraped_count)
 
     print("5. 高速ダッシュボードHTML・JSONアーカイブを生成中...")
     line_messages = create_dashboard_html(json_data, stock_dict)
@@ -832,6 +1030,7 @@ def main():
 
     print("6. LINEへレポートを配信中...")
     send_line_push_messages(line_messages)
+
 
 if __name__ == "__main__":
     main()
