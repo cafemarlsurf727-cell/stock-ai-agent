@@ -1,0 +1,211 @@
+{
+  "summary": {
+    "total_scraped": 39,
+    "top_picks_count": 8,
+    "market_trend_comment": "新高値更新銘柄が複数見られる一方で、金融庁の課徴金納付命令や下方修正といった悪材料が露呈した銘柄もあり、個別の業績やニュースに対する精査が重要。"
+  },
+  "evaluated_stocks": [
+    {
+      "code": "3560",
+      "name": "ほぼ日",
+      "rank": "S",
+      "breakout_quality": "高水準の出来高を伴う6年半ぶり高値更新",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "+22.1%",
+        "profit_growth": "+67.3%",
+        "catalyst": "ほぼ日手帳 2027の受注が想定上回る、利益予想の増額修正"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上昇トレンド（ボリンジャー±3σブレイク）"
+      },
+      "bear_case": "高値警戒感からの利食い売りリスク",
+      "invalidation": "直近の急騰起点となるサポートラインを明確に下抜けた場合",
+      "analysis_reason": "通期業績の上方修正と主力の「ほぼ日手帳 2027」の好調な受注を背景に、年初来高値を大きく上抜ける強いブレイクアウトを示しているため。",
+      "action_plan": "押し目買いを基本とし、急騰後の短期的な揺り戻しに注意して指値を入れる。"
+    },
+    {
+      "code": "460A",
+      "name": "ＢＲＡＮＵ",
+      "rank": "S",
+      "breakout_quality": "ストップ高を交えた力強い年初来高値更新",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "+39.2%",
+        "profit_growth": "+37.4%",
+        "catalyst": "26年10月期の業績予想上方修正、AIアシスタント機能の実装"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "強い上値追いトレンド"
+      },
+      "bear_case": "信用買残の影響による上値の重さや急ピッチな上昇の反動安",
+      "invalidation": "上方修正発表前の株価水準への逆戻り",
+      "analysis_reason": "通期業績予想の大幅な上方修正や建設現場向けAIサービスの展開など材料が豊富であり、株価もストップ高を交えて新高値を更新しているため。",
+      "action_plan": "短期的な過熱感に留意しつつ、押し目を丁寧に拾う方針とする。"
+    },
+    {
+      "code": "4847",
+      "name": "インテリジェント ウェイブ",
+      "rank": "A",
+      "breakout_quality": "着実な買い優勢による年初来高値更新",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+10.6%",
+        "profit_growth": "未確認",
+        "catalyst": "好業績期待と安定した買い気配"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "堅調な中長期の上昇基調"
+      },
+      "bear_case": "一部のアナリストレポートやRSI等による過熱感の指摘",
+      "invalidation": "25日移動平均線を下回って推移し始めた場合",
+      "analysis_reason": "業績は順調に拡大しており年初来高値を更新しているものの、成長率の基準や急激な出来高の増加が限定的であるため。",
+      "action_plan": "過熱ゾーンにあるため追撃買いは避け、テクニカルな押し目を待つ。"
+    },
+    {
+      "code": "189A",
+      "name": "Ｄ＆Ｍカンパニー",
+      "rank": "A",
+      "breakout_quality": "堅調な値動きによる年初来高値更新",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+8.1%",
+        "profit_growth": "+3.5%",
+        "catalyst": "直近高値更新と上値の軽さ"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "堅調"
+      },
+      "bear_case": "売上高・経常利益の伸び率が基準の10%/20%に未達",
+      "invalidation": "直近の安値を割り込んだ場合",
+      "analysis_reason": "上値の軽い展開が期待できるが、成長性の定量基準を満たしておらず、インパクトがやや物足りないため。",
+      "action_plan": "トレンドの持続性を確認しながら小幅なポジションで参入する。"
+    },
+    {
+      "code": "219A",
+      "name": "Ｈｅａｒｔｓｅｅｄ",
+      "rank": "A",
+      "breakout_quality": "値幅拡大を伴う高値更新",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "バイオ関連のテーマ性、治験進捗"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "ボラティリティの高い上昇局面"
+      },
+      "bear_case": "赤字決算の継続やバイオ特有の思惑先行リスク",
+      "invalidation": "治験結果やニュースに対する期待剥落による急落",
+      "analysis_reason": "バイオ関連としてのテーマ性や出来高を伴う上昇は見られるが、利益が出ておらずファンダメンタルズ面での裏付けに乏しいため。",
+      "action_plan": "デイトレーディングや短期のモメンタム狙いに限定し、厳格な損切設定を行う。"
+    },
+    {
+      "code": "479A",
+      "name": "ＰＲＯＮＩ",
+      "rank": "A",
+      "breakout_quality": "明確な抵抗帯ブレイクによる新高値到達",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "初の連結決算黒字化と好調な中間期業績"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "上値追い基調"
+      },
+      "bear_case": "信用買残の増加による将来的な上値の重さ",
+      "invalidation": "直近の突破水準を下回る推移となった場合",
+      "analysis_reason": "業績の好転を背景に新高値を更新しているが、成長基準の厳密な合致がデータから直接確認しきれないため。",
+      "action_plan": "信用残の動向に注意しつつ、押し目での買いを検討する。"
+    },
+    {
+      "code": "4436",
+      "name": "ミンカブ・ジ・インフォノイド",
+      "rank": "B",
+      "breakout_quality": "ストップ高を伴う急騰",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "-22%下方修正",
+        "catalyst": "NTTデータ・SBIとの資本業務提携"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "急騰後"
+      },
+      "bear_case": "今期経常利益の下方修正発表が含まれており、ファンダメンタルズの懸念がある",
+      "invalidation": "提携期待による買いが一巡し、株価が急騰前の水準に戻った場合",
+      "analysis_reason": "大型提携の材料でストップ高を記録したものの、直近で今期経常利益の下方修正を発表しているため。",
+      "action_plan": "材料出尽くしによる急落リスクを考慮し、手出し無しか超短期の売買にとどめる。"
+    },
+    {
+      "code": "4933",
+      "name": "Ｉ－ｎｅ",
+      "rank": "B",
+      "breakout_quality": "高値圏でのもみ合いからの上放れ",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "新高値更新とコスメ関連の物色"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "高値もみ合い"
+      },
+      "bear_case": "金融庁による課徴金納付命令の決定という重大なマイナス材料・コンプライアンス上の懸念が存在する",
+      "invalidation": "悪材料の嫌気が本格化し下落トレンドへ転換した場合",
+      "analysis_reason": "株価自体は新高値を更新しているが、金融庁による課徴金納付命令の決定という深刻なネガティブニュースが出ており、買い手控えが必須と判断するため。",
+      "action_plan": "投資対象から外し、保有している場合は速やかに撤退する。"
+    }
+  ],
+  "source_urls": [
+    "https://finance.yahoo.co.jp/quote/189A.T",
+    "https://finance.yahoo.co.jp/quote/189A.T/performance",
+    "https://finance.yahoo.co.jp/quote/189A.T/news",
+    "https://finance.yahoo.co.jp/quote/189A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/219A.T",
+    "https://finance.yahoo.co.jp/quote/219A.T/performance",
+    "https://finance.yahoo.co.jp/quote/219A.T/news",
+    "https://finance.yahoo.co.jp/quote/219A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/3560.T",
+    "https://finance.yahoo.co.jp/quote/3560.T/performance",
+    "https://finance.yahoo.co.jp/quote/3560.T/news",
+    "https://finance.yahoo.co.jp/quote/3560.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/4436.T",
+    "https://finance.yahoo.co.jp/quote/4436.T/performance",
+    "https://finance.yahoo.co.jp/quote/4436.T/news",
+    "https://finance.yahoo.co.jp/quote/4436.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/460A.T",
+    "https://finance.yahoo.co.jp/quote/460A.T/performance",
+    "https://finance.yahoo.co.jp/quote/460A.T/news",
+    "https://finance.yahoo.co.jp/quote/460A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/479A.T",
+    "https://finance.yahoo.co.jp/quote/479A.T/performance",
+    "https://finance.yahoo.co.jp/quote/479A.T/news",
+    "https://finance.yahoo.co.jp/quote/479A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/4847.T",
+    "https://finance.yahoo.co.jp/quote/4847.T/performance",
+    "https://finance.yahoo.co.jp/quote/4847.T/news",
+    "https://finance.yahoo.co.jp/quote/4847.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/4933.T",
+    "https://finance.yahoo.co.jp/quote/4933.T/performance",
+    "https://finance.yahoo.co.jp/quote/4933.T/news",
+    "https://finance.yahoo.co.jp/quote/4933.T/disclosure"
+  ]
+}
