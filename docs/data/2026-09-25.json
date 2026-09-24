@@ -1,0 +1,211 @@
+{
+  "summary": {
+    "total_scraped": 39,
+    "top_picks_count": 8,
+    "market_trend_comment": "新高値更新銘柄を中心に買い優勢の展開が続いており、特に半導体関連やAI・DXソリューションを展開するグロース・プライム市場の銘柄へ資金が流入している。"
+  },
+  "evaluated_stocks": [
+    {
+      "code": "135A",
+      "name": "ＶＲＡＩＮ　Ｓｏｌｕｔｉｏｎ",
+      "rank": "S",
+      "breakout_quality": "年初来高値を更新し上値抵抗線が薄い。出来高を伴う上昇が連続し強いトレンド。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "+47.1%",
+        "profit_growth": "+53.6%",
+        "catalyst": "製造業向けAI・DX需要、ダイハツ工業との特許共同出願、大型受注"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上昇基調を保ち高値圏を維持"
+      },
+      "bear_case": "PERが高水準であり、成長期待剥落時の株価下落リスクがある。",
+      "invalidation": "直近の安値圏を下回り、出来高を伴う下落トレンドへ転換した場合。",
+      "analysis_reason": "売上高および利益の伸びが大きく、製造業向けAI外観検査という明確な強みと高値更新のモメンタムが合致しているため。",
+      "action_plan": "押し目買いを基本とし、出来高の縮小や市場全体の変調には注意して追随する。"
+    },
+    {
+      "code": "269A",
+      "name": "Ｓａｐｅｅｔ",
+      "rank": "S",
+      "breakout_quality": "新高値を更新し、上値の軽い状態からさらなる上値追いが期待できる。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "+94.2%",
+        "profit_growth": "+656.7%",
+        "catalyst": "AIロープレシステム「SAPIロープレ」の導入拡大、新規AIソリューション共同開発"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "高値圏での推移、上値余地あり"
+      },
+      "bear_case": "急速な業績拡大に対する過度な期待が剥げた際の急変動リスク。",
+      "invalidation": "直近のサポートラインを割り込み、下値模索の展開となった場合。",
+      "analysis_reason": "売上高約94%増、営業利益数倍増という圧倒的な業績成長と、AI関連の矢継ぎ早の開示材料が評価できるため。",
+      "action_plan": "高値掴みに注意しつつ、調整局面での買いを検討する。"
+    },
+    {
+      "code": "2737",
+      "name": "トーメンデバイス",
+      "rank": "A",
+      "breakout_quality": "プライム市場において年初来高値を更新し、順調な上昇トレンド。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "次世代AIアクセラレータ関連、業績および配当予想の上方修正（増配）"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "順調な株価上昇トレンドを描いている"
+      },
+      "bear_case": "半導体需給の変動や市況悪化による業績への影響。",
+      "invalidation": "トレンドラインを下抜けし、上値が重くなった場合。",
+      "analysis_reason": "高配当利回りを伴いながら上場来・年初来高値を更新しており、業績も堅調であるため。",
+      "action_plan": "押し目を丁寧に拾い、中長期的なトレンドに乗る。"
+    },
+    {
+      "code": "3156",
+      "name": "レスター",
+      "rank": "A",
+      "breakout_quality": "力強い値動きで年初来高値を更新し、上値の軽さを活かした上昇が見込まれる。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "生成AI向けデータセンター需要の拡大、通期連結業績予想の上方修正及び増配"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "力強い値動きで年初来高値を更新"
+      },
+      "bear_case": "為替変動や半導体市場の循環的なサイクルリスク。",
+      "invalidation": "高値圏での維持ができず急落に転じた場合。",
+      "analysis_reason": "生成AI関連のデータセンター需要を取り込み、上方修正と増配を発表している点がポジティブ。",
+      "action_plan": "トレンドフォローでの買いを検討。"
+    },
+    {
+      "code": "3131",
+      "name": "シンデン・ハイテックス",
+      "rank": "A",
+      "breakout_quality": "直近の高値を上抜けて年初来高値を更新し、強い買い圧力が確認できる。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "通期連結業績予想及び配当予想の修正、高配当利回り"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "上値を抜けて強い買い圧力"
+      },
+      "bear_case": "商社としての仕入環境やエレクトロニクス市場の変動リスク。",
+      "invalidation": "節目となる価格帯を下回り、上値が重くなった場合。",
+      "analysis_reason": "上方修正と配当魅力を背景に年初来高値を更新しておりテクニカル面も良好。",
+      "action_plan": "押し目を狙いつつ、買い圧力を確認して参入する。"
+    },
+    {
+      "code": "1897",
+      "name": "金下建設",
+      "rank": "B",
+      "breakout_quality": "年初来高値を更新して上値が軽いものの、出来高はやや少なめ。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+26.0% (中間期売上高)",
+        "profit_growth": "未確認",
+        "catalyst": "大型工事の順調な進捗"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "買い優勢の展開"
+      },
+      "bear_case": "流動性が比較的低く、大口の売買で価格が大きく変動しやすいリスク。",
+      "invalidation": "出来高が細った状態で高値から急落した場合。",
+      "analysis_reason": "中小型建設株として堅調だが、AI・半導体等のグロース・高モメンタム銘柄と比較して上昇余地の強さが限定的。",
+      "action_plan": "少額での監視または様子見。"
+    },
+    {
+      "code": "189A",
+      "name": "Ｄ＆Ｍカンパニー",
+      "rank": "B",
+      "breakout_quality": "高値圏での推移を維持しながら年初来高値を更新。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+8.1%",
+        "profit_growth": "+3.5%",
+        "catalyst": "各種株主優待の拡充や資産残高の推移"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "高値圏での推移"
+      },
+      "bear_case": "成長率が基準を満たしておらず、モメンタムがやや弱い。",
+      "invalidation": "高値圏を維持できず調整色を強めた場合。",
+      "analysis_reason": "新高値更新にはあるものの、売上・利益の伸びが基準に届かず、カタリストも限定的。",
+      "action_plan": "様子見を推奨。"
+    },
+    {
+      "code": "219A",
+      "name": "Ｈｅａｒｔｓｅｅｄ",
+      "rank": "B",
+      "breakout_quality": "年初来高値を更新しているが、直近の開示はガバナンス関連が中心で業績期待は未達。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "治験関連の進捗（過去材料）"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "モメンタムはあるが業績は赤字"
+      },
+      "bear_case": "大幅な赤字決算が続いており、ファンダメンタルズ面での裏付けに乏しい。",
+      "invalidation": "株価がモメンタムを失い急落に転じた場合。",
+      "analysis_reason": "バイオベンチャー特有の期待感で買われている側面が強く、業績基準を満たさないためランクB。",
+      "action_plan": "ボラティリティが高いため積極的なエントリーは控えめにする。"
+    }
+  ],
+  "source_urls": [
+    "https://finance.yahoo.co.jp/quote/135A.T",
+    "https://finance.yahoo.co.jp/quote/135A.T/performance",
+    "https://finance.yahoo.co.jp/quote/135A.T/news",
+    "https://finance.yahoo.co.jp/quote/135A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/1897.T",
+    "https://finance.yahoo.co.jp/quote/1897.T/performance",
+    "https://finance.yahoo.co.jp/quote/1897.T/news",
+    "https://finance.yahoo.co.jp/quote/1897.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/189A.T",
+    "https://finance.yahoo.co.jp/quote/189A.T/performance",
+    "https://finance.yahoo.co.jp/quote/189A.T/news",
+    "https://finance.yahoo.co.jp/quote/189A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/219A.T",
+    "https://finance.yahoo.co.jp/quote/219A.T/performance",
+    "https://finance.yahoo.co.jp/quote/219A.T/news",
+    "https://finance.yahoo.co.jp/quote/219A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/269A.T",
+    "https://finance.yahoo.co.jp/quote/269A.T/performance",
+    "https://finance.yahoo.co.jp/quote/269A.T/news",
+    "https://finance.yahoo.co.jp/quote/269A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/2737.T",
+    "https://finance.yahoo.co.jp/quote/2737.T/performance",
+    "https://finance.yahoo.co.jp/quote/2737.T/news",
+    "https://finance.yahoo.co.jp/quote/2737.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/3131.T",
+    "https://finance.yahoo.co.jp/quote/3131.T/performance",
+    "https://finance.yahoo.co.jp/quote/3131.T/news",
+    "https://finance.yahoo.co.jp/quote/3131.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/3156.T",
+    "https://finance.yahoo.co.jp/quote/3156.T/performance",
+    "https://finance.yahoo.co.jp/quote/3156.T/news",
+    "https://finance.yahoo.co.jp/quote/3156.T/disclosure"
+  ]
+}
