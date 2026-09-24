@@ -1,0 +1,211 @@
+{
+  "summary": {
+    "total_scraped": 39,
+    "top_picks_count": 8,
+    "market_trend_comment": "新高値更新銘柄を中心に、好決算やAI・半導体関連のテーマ株へ継続的な買いが流入し、堅調な市場環境が維持されている。"
+  },
+  "evaluated_stocks": [
+    {
+      "code": "135A",
+      "name": "ＶＲＡＩＮ　Ｓｏｌｕｔｉｏｎ",
+      "rank": "S",
+      "breakout_quality": "上場来の高値圏を維持し、上値の軽い展開からさらなる上昇が期待できる。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "製造業向けDXで急成長、ダイハツ工業とAI外観検査技術に関する特許を共同出願、大型受注"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上昇基調を保ったまま高値圏に戻す流れ"
+      },
+      "bear_case": "高PER（51.86倍）による過熱感や、グロース市場全体の地合い悪化による売り圧力。",
+      "invalidation": "直近の安値圏を下回り、出来高を伴って下落トレンドへ転換した場合。",
+      "analysis_reason": "製造業向けAI外観検査システムで高い成長を誇り、商いを伴った連続上昇や新高値更新などテクニカル・ファンダメンタルズともに極めて優秀。",
+      "action_plan": "押し目買いを基本とし、年初来高値ブレイクを確認しながら順次買い増す。"
+    },
+    {
+      "code": "269A",
+      "name": "Ｓａｐｅｅｔ",
+      "rank": "S",
+      "breakout_quality": "節目となる価格帯を捉えて新高値を更新し、上値抵抗線を突破して上値が軽い。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": true,
+        "revenue_growth": "+94.2%",
+        "profit_growth": "+656.7%",
+        "catalyst": "売上高・営業利益の急成長、AIロープレシステムの導入拡大およびOEM提供"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "未確認"
+      },
+      "bear_case": "急速な株価上昇に伴う利食い売りや、バリュエーション（PER37.73倍）の高さに対する警戒感。",
+      "invalidation": "直近の安値水準を割り込み、上値抵抗線の下に押し戻された場合。",
+      "analysis_reason": "第3四半期累計で売上高・営業利益ともに異次元の急拡大を見せており、AIロープレシステムの引き合いも強いため。",
+      "action_plan": "調整局面での押し目を狙い、高値更新のブレイクを確認してエントリーする。"
+    },
+    {
+      "code": "334A",
+      "name": "ビジュアル・プロセッシング・ジャパン",
+      "rank": "A",
+      "breakout_quality": "グロース市場で強いモメンタムを維持しながら新高値を更新。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+22.0%",
+        "profit_growth": "未確認",
+        "catalyst": "SaaS「CIERTO」の新規契約拡大およびサンドラッグ等への採用"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "未確認"
+      },
+      "bear_case": "市場全体のボラティリティ拡大によるグロース株全般の調整リスク。",
+      "invalidation": "高値圏からの急落で出来高が枯渇し、上昇トレンドが崩れた場合。",
+      "analysis_reason": "主力のSaaS「CIERTO」の契約件数が順調に拡大し、利益面でも上場関連費用の消滅効果などで堅調なため。",
+      "action_plan": "慎重に板気配を確認しながら、押し目またはブレイクアウトのタイミングで買いを入れる。"
+    },
+    {
+      "code": "2737",
+      "name": "トーメンデバイス",
+      "rank": "A",
+      "breakout_quality": "高値圏での強気な値動きが継続し、堅調な業績期待を背景にした新高値ブレイク。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "生成AI・半導体需要の拡大、業績・配当予想の上方修正（増配）"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "高値圏での強気な値動きが継続"
+      },
+      "bear_case": "自己資本比率が低め（17.2%）であり、半導体市場の循環的な景気変動リスクがある。",
+      "invalidation": "上場来高値圏から大きく押し戻され、主要な移動平均線を割り込んだ場合。",
+      "analysis_reason": "半導体需要の拡大を追い風に業績が絶好調であり、増配も発表されていて投資妙味が大きいため。",
+      "action_plan": "押し目を丁寧に拾いつつ、高値更新への順張りを狙う。"
+    },
+    {
+      "code": "3156",
+      "name": "レスター",
+      "rank": "A",
+      "breakout_quality": "継続的な買いが流入して新高値を更新、上値にしこりがない。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+43.4%",
+        "profit_growth": "未確認",
+        "catalyst": "生成AI向けデータセンター需要の拡大、円安効果、上方修正と増配"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "スムーズな上昇"
+      },
+      "bear_case": "エレクトロニクス商社としての景気敏感株の側面があり、マクロ経済の減速リスクの影響を受ける。",
+      "invalidation": "年初来高値からの反落幅が大きく、下値支持線を下抜けた場合。",
+      "analysis_reason": "生成AI向けデータセンター需要や円安を背景に大幅な増収増益と上方修正を達成しており、上値が軽いため。",
+      "action_plan": "トレンドに沿った押し目買いおよびブレイク狙いの打診買いを行う。"
+    },
+    {
+      "code": "1897",
+      "name": "金下建設",
+      "rank": "B",
+      "breakout_quality": "年初来高値を更新して上値を切り上げている。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "+26.0%",
+        "profit_growth": "未確認",
+        "catalyst": "大型工事の順調な進捗による大幅増収"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "上値を切り上げる堅調な形状"
+      },
+      "bear_case": "出来高が比較的少なく（1,300株など）、流動性リスクや突発的な値動きへの警戒が必要。",
+      "invalidation": "出来高の低迷が続き、直近の支持線を割込む形での下落。",
+      "analysis_reason": "中間期の大幅増収や工事の進捗は良好だが、流動性が低く全般的な爆発力に欠けるため。",
+      "action_plan": "流動性を十分に監視し、無理のない範囲で少額の打診買いにとどめる。"
+    },
+    {
+      "code": "219A",
+      "name": "Ｈｅａｒｔｓｅｅｄ",
+      "rank": "B",
+      "breakout_quality": "成長株市場で新高値を更新し、強い買い意欲と出来高の増加が見られる。",
+      "confidence": "Medium",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "治験の進捗や再生医療等製品製造販売業の業許可申請"
+      },
+      "technical": {
+        "volume_surge": true,
+        "moving_average_trend": "上昇日で出来高が膨らむ局面"
+      },
+      "bear_case": "足元で赤字決算が継続しており、社外取締役の辞任などガバナンス関連の不透明要素がある。",
+      "invalidation": "開示関連の悪材料や、株価が急激に値を消して下落トレンドに転換した場合。",
+      "analysis_reason": "株価や出来高の勢いはあるものの、業績が赤字でありガバナンス面のニュースも散見されるため慎重な評価が必要。",
+      "action_plan": "短期のモメンタム狙いに限定し、厳格な損切ラインを設定して臨む。"
+    },
+    {
+      "code": "3131",
+      "name": "シンデン・ハイテックス",
+      "rank": "A",
+      "breakout_quality": "年初来高値を更新し、下値を切り上げる堅調なチャート形状。",
+      "confidence": "High",
+      "fundamentals": {
+        "meets_growth_criteria": false,
+        "revenue_growth": "未確認",
+        "profit_growth": "未確認",
+        "catalyst": "通期連結業績予想の修正や好調なエレクトロニクス関連需要"
+      },
+      "technical": {
+        "volume_surge": false,
+        "moving_average_trend": "下値を切り上げる堅調なチャート形状"
+      },
+      "bear_case": "自己資本比率や需給要因による短期的な利益確定売りの出やすさ。",
+      "invalidation": "年初来高値から一転して急ピッチな調整を始め、下値支持線を割り込んだ場合。",
+      "analysis_reason": "業績修正や好調な株主還元・配当（利回り3.11%）を背景に、堅実な上値追いが見込めるため。",
+      "action_plan": "押し目を待って買い下がり、中長期目線でも保有を検討する。"
+    }
+  ],
+  "source_urls": [
+    "https://finance.yahoo.co.jp/quote/135A.T",
+    "https://finance.yahoo.co.jp/quote/135A.T/performance",
+    "https://finance.yahoo.co.jp/quote/135A.T/news",
+    "https://finance.yahoo.co.jp/quote/135A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/1897.T",
+    "https://finance.yahoo.co.jp/quote/1897.T/performance",
+    "https://finance.yahoo.co.jp/quote/1897.T/news",
+    "https://finance.yahoo.co.jp/quote/1897.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/219A.T",
+    "https://finance.yahoo.co.jp/quote/219A.T/performance",
+    "https://finance.yahoo.co.jp/quote/219A.T/news",
+    "https://finance.yahoo.co.jp/quote/219A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/269A.T",
+    "https://finance.yahoo.co.jp/quote/269A.T/performance",
+    "https://finance.yahoo.co.jp/quote/269A.T/news",
+    "https://finance.yahoo.co.jp/quote/269A.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/2737.T",
+    "https://finance.yahoo.co.jp/quote/2737.T/performance",
+    "https://finance.yahoo.co.jp/quote/2737.T/news",
+    "https://finance.yahoo.co.jp/quote/2737.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/3131.T",
+    "https://finance.yahoo.co.jp/quote/3131.T/performance",
+    "https://finance.yahoo.co.jp/quote/3131.T/news",
+    "https://finance.yahoo.co.jp/quote/3131.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/3156.T",
+    "https://finance.yahoo.co.jp/quote/3156.T/performance",
+    "https://finance.yahoo.co.jp/quote/3156.T/news",
+    "https://finance.yahoo.co.jp/quote/3156.T/disclosure",
+    "https://finance.yahoo.co.jp/quote/334A.T",
+    "https://finance.yahoo.co.jp/quote/334A.T/performance",
+    "https://finance.yahoo.co.jp/quote/334A.T/news",
+    "https://finance.yahoo.co.jp/quote/334A.T/disclosure"
+  ]
+}
